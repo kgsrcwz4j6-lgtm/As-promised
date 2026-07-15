@@ -2682,7 +2682,19 @@ document.addEventListener('DOMContentLoaded',()=>{
   // 字体
   const font=new FontFace('Jinghua LaoSong','url(assets/京華老宋体.ttf)');font.load().then(()=>{document.fonts.add(font);onDone();}).catch(()=>onDone());
   // 全部完成 + 最少等2秒才显示标题画面
-  const pollReady=setInterval(()=>{if(done>=5&&Date.now()-startTime>2500){clearInterval(pollReady);finishLoad();}},300);
+  const pollReady=setInterval(()=>{if(done>=5&&Date.now()-startTime>2500){clearInterval(pollReady);clearInterval(slowWarn);clearInterval(skipShow);finishLoad();}},300);
+  // 10秒未完成 → 提示
+  const slowWarn=setTimeout(()=>{if(ld.classList.contains('active'))ldText.textContent='加载较慢，请耐心等待……';},10000);
+  // 60秒未完成 → 显示跳过按钮
+  const skipShow=setTimeout(()=>{
+    if(!ld.classList.contains('active'))return;
+    clearInterval(ldTimer);ldText.textContent='';
+    const btn=document.createElement('button');
+    btn.textContent='跳过等待';
+    btn.style.cssText='font-family:var(--font-song);font-size:.9rem;letter-spacing:.1em;background:transparent;border:1px solid #8B7E6A;color:#8B7E6A;padding:10px 28px;cursor:pointer;border-radius:3px;';
+    btn.onclick=()=>{clearInterval(pollReady);clearInterval(imgTimer);finishLoad();};
+    ld.appendChild(btn);
+  },60000);
   const startMusic=()=>{const m=document.getElementById('bgm');m.play().catch(()=>{});};
   document.querySelector('.it-btn').addEventListener('click',startMusic,{once:true});
 });
