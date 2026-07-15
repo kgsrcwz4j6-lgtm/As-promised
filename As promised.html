@@ -487,6 +487,12 @@ html,body{height:100%;overflow:hidden;font-family:var(--font-body);background:va
 #fog-overlay{position:fixed;inset:0;z-index:995;background:oklch(0% 0 0/.7);pointer-events:none;opacity:0;transition:opacity 1.5s;}
 #fog-overlay.active{opacity:1;}
 
+#loading-overlay{display:none;position:fixed;inset:0;z-index:998;background:#F5F0E8;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;}
+#loading-overlay.active{display:flex;}
+#loading-overlay img{max-width:85%;max-height:75%;object-fit:contain;box-shadow:0 4px 24px rgba(0,0,0,.08);border-radius:2px;}
+#loading-overlay .ld-text{font-family:var(--font-song);font-size:.9rem;color:#8B7E6A;letter-spacing:.1em;animation:ldPulse 2s infinite;}
+@keyframes ldPulse{0%,100%{opacity:.5}50%{opacity:1}}
+
 /* NPC 动作描述 */
 .action-desc{font-style:italic;color:var(--ink-fade);opacity:.75;}
 
@@ -2657,19 +2663,22 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 // === 开场动画 ===
+const LOADING_IMGS=['第1章_陆砚_设定标注.png','第2章_江卿禾_设定标注.png','第3章_方祀_设定标注.png','第4章_萧钺_设定标注.png','第5章_顾冶珩_设定标注.png','第6章_温岐_设定标注.png','第7章_温瑜_设定标注.png','第8章_苏涧_设定标注.png','第9章_云笙_设定标注.png'];
 function startGame(){
   const fog=document.getElementById('fog-overlay');
-  // 雾效瞬间全黑，先遮住再撤开场画面
-  fog.style.transition='none';
-  fog.classList.add('active');
-  fog.offsetHeight; // force reflow
+  fog.style.transition='none';fog.classList.add('active');fog.offsetHeight;
   document.getElementById('intro-overlay').classList.add('hidden');
-  // 恢复淡出过渡，供后续场景切换使用
   fog.style.transition='';
-  setTimeout(()=>{
-    fog.classList.remove('active');
-    showIntroScene('assets/scene01.png',['这是哪里？'],0);
-  },1500);
+  // 随机守护灵标注图作 loading 背景
+  const ld=document.getElementById('loading-overlay');
+  ld.querySelector('img').src='assets/loading/'+LOADING_IMGS[Math.floor(Math.random()*LOADING_IMGS.length)];
+  ld.classList.add('active');
+  // 预加载 scene01 + 字体
+  const img=new Image();img.src='assets/scene01.png';
+  img.onload=()=>{ld.classList.remove('active');fog.classList.remove('active');showIntroScene('assets/scene01.png',['这是哪里？'],0);};
+  img.onerror=()=>{ld.classList.remove('active');fog.classList.remove('active');setTimeout(()=>showIntroScene('assets/scene01.png',['这是哪里？'],0),500);};
+  // 超时保护 8s
+  setTimeout(()=>{if(ld.classList.contains('active')){ld.classList.remove('active');fog.classList.remove('active');showIntroScene('assets/scene01.png',['这是哪里？'],0);}},8000);
 }
 // === 场景过渡 ===
 function showIntroScene(bg,subtitles,idx){
@@ -2864,5 +2873,6 @@ function closePaper(){document.getElementById('paper-viewer').classList.remove('
 </div>
 </div>
 
+<div id="loading-overlay"><img src="" alt=""><div class="ld-text">正在载入……</div></div>
 </body>
 </html>
