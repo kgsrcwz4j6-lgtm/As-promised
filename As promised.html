@@ -64,7 +64,7 @@ html,body{height:100%;overflow:hidden;font-family:var(--font-body);background:va
   grid-column:1;grid-row:1;
   position:relative;overflow:hidden;
   background:var(--night);
-  background-image:url('assets/scene03.png');
+  background-image:url('assets/scene03.webp');
   background-size:cover;
   background-position:center;
   min-height:0;
@@ -2679,7 +2679,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     const bgm=document.getElementById('bgm');bgm.volume=0.2;bgm.play().catch(()=>{});
   };
   // 预加载资源
-  ['assets/scene01.png','assets/scene02.png','assets/scene03.png','assets/scene04.png'].forEach(src=>{const i=new Image();i.onload=onDone;i.onerror=onDone;i.src=src;});
+  ['assets/scene01.webp','assets/scene02.webp','assets/scene03.webp','assets/scene04.webp'].forEach(src=>{const i=new Image();i.onload=onDone;i.onerror=onDone;i.src=src;});
   // 字体
   const font=new FontFace('Jinghua LaoSong','url(shared/font/京華老宋体.ttf)');font.load().then(()=>{document.fonts.add(font);onDone();}).catch(()=>onDone());
   // 全部完成 + 最少等2秒才显示标题画面
@@ -2706,7 +2706,7 @@ function startGame(){
   fog.style.transition='none';fog.classList.add('active');fog.offsetHeight;
   document.getElementById('intro-overlay').classList.add('hidden');
   fog.style.transition='';
-  showIntroScene('assets/scene01.png',['这是哪里？'],0);
+  showIntroScene('assets/scene01.webp',['这是哪里？'],0);
 }
 // === 场景过渡 ===
 function showIntroScene(bg,subtitles,idx){
@@ -2737,7 +2737,7 @@ function showIntroScene(bg,subtitles,idx){
     setTimeout(()=>{
       if(bg.includes('scene01')){
         // 场景02：鹤鸣场景 — 音频结束后2秒才显示字幕
-        siBg.src='assets/scene02.png';
+        siBg.src='assets/scene02.webp';
         scene.classList.add('active');
         fog.classList.remove('active');
         const craneAudio=document.getElementById('sfx-crane');
@@ -2761,7 +2761,7 @@ function showIntroScene(bg,subtitles,idx){
               init();
               fog.classList.remove('active');
             };
-            img.src='assets/scene03.png';
+            img.src='assets/scene03.webp';
           },2000);
         }
         function clearCraneTimer(){if(window._craneTimer){clearTimeout(window._craneTimer);delete window._craneTimer;}}
@@ -2777,7 +2777,7 @@ function showIntroScene(bg,subtitles,idx){
           init();
           fog.classList.remove('active');
         };
-        img.src='assets/scene03.png';
+        img.src='assets/scene03.webp';
       }
     },2000);
     return;

@@ -25,7 +25,7 @@ html,body{height:100%;overflow:hidden;font-family:var(--font-song);background:va
 /* Scene — 酒肆二楼靠窗 */
 #scene-area{grid-column:1;grid-row:1;position:relative;overflow:hidden;background:var(--night);}
 #scene-area::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:8;border:1px solid oklch(55% .06 75/.25);box-shadow:inset 0 0 60px oklch(0% 0 0/.3);}
-#scene-bg{position:absolute;inset:0;background:url('assets/scene_tavern.png') center/cover;z-index:1;}
+#scene-bg{position:absolute;inset:0;background:url('assets/scene_tavern.webp') center/cover;z-index:1;}
 /* Window vignette */
 #scene-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,oklch(8% .02 260/.4) 0%,transparent 40%,oklch(20% .03 230/.3) 100%);z-index:2;}
 /* Fog layers */
@@ -1131,7 +1131,7 @@ function beginChapter(){
   STATE._introPhase = true;  // 开场引导中，输入阻塞
   // === 场景02：酒肆二楼，自动播放开场引导 ===
   const bg=document.getElementById('scene-bg');
-  bg.style.backgroundImage="url('assets/scene_tavern.png')";
+  bg.style.backgroundImage="url('assets/scene_tavern.webp')";
   document.getElementById('spirit-portrait').style.display='block';
   setUIMode('dialogue');
 
@@ -1201,7 +1201,7 @@ function advanceIntro(){
     setTimeout(()=>{
       addWater('（她站起来拍拍手，朝门口一扬下巴。）"桌上有温好的黄酒。想从谁开始——你自己定。我在旁边。"');
       setTimeout(()=>{
-        document.getElementById('scene-bg').style.backgroundImage="url('assets/scene_tavern_interior.png')";
+        document.getElementById('scene-bg').style.backgroundImage="url('assets/scene_tavern_interior.webp')";
         setUIMode('full');
         renderNPCs();
       },2000);
@@ -1812,7 +1812,7 @@ function startEnding(){
 
   // === 场景04：案件梳理，不出现任何守护灵或NPC立绘 ===
   const bg=document.getElementById('scene-bg');
-  bg.style.backgroundImage="url('assets/scene_farewell.png')";
+  bg.style.backgroundImage="url('assets/scene_farewell.webp')";
   document.getElementById('spirit-portrait').style.display='block';
   document.getElementById('npc-display').classList.remove('show');
   document.getElementById('npc-panel').style.display='none';
@@ -1927,7 +1927,7 @@ function goScene05(endingType,flashbackEnc){
   const flashback=decodeURIComponent(flashbackEnc||'');
   document.getElementById('ending-overlay').classList.remove('active');
   const bg=document.getElementById('scene-bg');
-  bg.style.backgroundImage="url('assets/scene_farewell.png')";
+  bg.style.backgroundImage="url('assets/scene_farewell.webp')";
   document.getElementById('spirit-portrait').style.display='block';
   setUIMode('dialogue');
 
