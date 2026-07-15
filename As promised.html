@@ -2675,7 +2675,7 @@ function startGame(){
   ld.classList.add('active');
   // 预加载 scene01 + 字体
   const img=new Image();img.src='assets/scene01.png';
-  img.onload=()=>{ld.classList.remove('active');fog.classList.remove('active');showIntroScene('assets/scene01.png',['这是哪里？'],0);};
+  img.onload=()=>{ld.classList.remove('active');showIntroScene('assets/scene01.png',['这是哪里？'],0);};
   img.onerror=()=>{ld.classList.remove('active');fog.classList.remove('active');setTimeout(()=>showIntroScene('assets/scene01.png',['这是哪里？'],0),500);};
   // 超时保护 8s
   setTimeout(()=>{if(ld.classList.contains('active')){ld.classList.remove('active');fog.classList.remove('active');showIntroScene('assets/scene01.png',['这是哪里？'],0);}},8000);
