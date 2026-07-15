@@ -2664,7 +2664,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const ldTimer=setInterval(()=>{ldText.textContent=LD_TEXTS[lt%LD_TEXTS.length];lt++;},1500);
   ldText.textContent=LD_TEXTS[0];
   let done=0;
-  const onDone=()=>{done++;ldText.textContent='预加载 '+done+'/6……';if(done>=6){clearInterval(ldTimer);ld.classList.remove('active');document.getElementById('intro-overlay').style.display='';const v=document.getElementById('intro-video');v.muted=true;v.play().catch(()=>{});setTimeout(()=>{v.muted=false;},100);const bgm=document.getElementById('bgm');bgm.volume=0.2;bgm.play().catch(()=>{});}};
+  const onDone=()=>{done++;ldText.textContent='预加载 '+done+'/5……';if(done>=5){clearInterval(ldTimer);ld.classList.remove('active');document.getElementById('intro-overlay').style.display='';const v=document.getElementById('intro-video');v.muted=true;v.play().catch(()=>{});setTimeout(()=>{v.muted=false;},100);const bgm=document.getElementById('bgm');bgm.volume=0.2;bgm.play().catch(()=>{});}};
   // 预加载资源
   ['assets/scene01.png','assets/scene02.png','assets/scene03.png','assets/scene04.png'].forEach(src=>{const i=new Image();i.onload=onDone;i.onerror=onDone;i.src=src;});
   // 字体
