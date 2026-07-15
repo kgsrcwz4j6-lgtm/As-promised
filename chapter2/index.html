@@ -395,6 +395,7 @@ html,body{height:100%;overflow:hidden;font-family:var(--font-song);background:va
 <audio id="sfx-jh-intro" src="assets/jiangqinghe firstsight.mp3" preload="auto"></audio>
 <audio id="sfx-tavern" src="assets/tavern bgm.mp3" preload="auto" style="display:none;"></audio>
 <audio id="sfx-river" src="assets/river gentle flow.mp3" preload="auto" loop style="display:none;"></audio>
+<audio id="sfx-letter-voice" src="assets/沈元济 audio配音.wav" preload="auto" style="display:none;"></audio>
 
 <!-- Item popup (match Ch1 format) -->
 <div id="item-popup" style="display:none;position:fixed;inset:0;z-index:600;background:oklch(8% .02 260/.88);">
@@ -2055,9 +2056,19 @@ function toggleBGM(){
 // === 移送函 ===
 function showLetter(){
   document.getElementById('letter-overlay').classList.add('active');
+  // 淡出背景音，播放配音
+  const bgm=document.getElementById('bgm');
+  const voice=document.getElementById('sfx-letter-voice');
+  if(bgm&&!bgm.paused){bgm.volume=0.04;}
+  if(voice){voice.volume=0.9;voice.currentTime=0;voice.play().catch(()=>{});}
 }
 function closeLetter(){
   document.getElementById('letter-overlay').classList.remove('active');
+  // 停止配音，恢复背景音
+  const voice=document.getElementById('sfx-letter-voice');
+  const bgm=document.getElementById('bgm');
+  if(voice){voice.pause();voice.currentTime=0;}
+  if(bgm&&!bgm.paused){bgm.volume=0.13;}
 }
 // === 移送函 ===
 function showTransfer(endingType){
@@ -2257,6 +2268,6 @@ if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/sw.js').catch(()=>{});
 }
 </script>
-<button onclick="if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(()=>{})" style="position:fixed;top:16px;right:16px;z-index:1001;background:transparent;border:1px solid var(--water-cyan);color:var(--water-cyan);font-family:var(--font-song);font-size:.65rem;letter-spacing:.06em;padding:4px 10px;cursor:pointer;border-radius:3px;opacity:.5;transition:all .3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.5'">⛶</button>
+<button onclick="if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(()=>{})" style="position:fixed;top:16px;right:16px;z-index:1001;background:transparent;border:1px solid var(--water-cyan);color:var(--water-cyan);font-family:var(--font-song);font-size:.75rem;letter-spacing:.06em;padding:5px 14px;cursor:pointer;border-radius:3px;opacity:.5;transition:all .3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.5'">⛶ 全屏</button>
 </body>
 </html>
