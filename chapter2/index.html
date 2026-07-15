@@ -6,9 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#1A1525">
-<link rel="manifest" href="../manifest.json">
 <title>As Promised · 如期</title>
 <link rel="stylesheet" href="../shared/base.css">
+<link rel="preload" as="font" href="../shared/font/京華老宋体.ttf" crossorigin>
 <link rel="manifest" href="../../../manifest.json">
 <style>
 :root{
@@ -391,11 +391,11 @@ html,body{height:100%;overflow:hidden;font-family:var(--font-song);background:va
   </div>
 </div>
 
-<audio id="bgm" src="assets/bgm.mp3" loop preload="auto" style="display:none;"></audio>
-<audio id="sfx-jh-intro" src="assets/jiangqinghe firstsight.mp3" preload="auto"></audio>
-<audio id="sfx-tavern" src="assets/tavern bgm.mp3" preload="auto" style="display:none;"></audio>
-<audio id="sfx-river" src="assets/river gentle flow.mp3" preload="auto" loop style="display:none;"></audio>
-<audio id="sfx-letter-voice" src="assets/沈元济 audio配音.wav" preload="auto" style="display:none;"></audio>
+<audio id="bgm" src="assets/bgm.mp3" loop preload="none" style="display:none;"></audio>
+<audio id="sfx-jh-intro" src="assets/jiangqinghe firstsight.mp3" preload="none"></audio>
+<audio id="sfx-tavern" src="assets/tavern bgm.mp3" preload="none" style="display:none;"></audio>
+<audio id="sfx-river" src="assets/river gentle flow.mp3" preload="none" loop style="display:none;"></audio>
+<audio id="sfx-letter-voice" src="assets/沈元济 audio配音.wav" preload="none" style="display:none;"></audio>
 
 <!-- Item popup (match Ch1 format) -->
 <div id="item-popup" style="display:none;position:fixed;inset:0;z-index:600;background:oklch(8% .02 260/.88);">
