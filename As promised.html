@@ -2663,14 +2663,22 @@ document.addEventListener('DOMContentLoaded',()=>{
   let lt=0;const ldText=ld.querySelector('.ld-text');
   const ldTimer=setInterval(()=>{ldText.textContent=LD_TEXTS[lt%LD_TEXTS.length];lt++;},1500);
   ldText.textContent=LD_TEXTS[0];
-  let done=0;
-  const onDone=()=>{done++;ldText.textContent='预加载 '+done+'/5……';if(done>=5){clearInterval(ldTimer);ld.classList.remove('active');document.getElementById('intro-overlay').style.display='';const v=document.getElementById('intro-video');v.muted=true;v.play().catch(()=>{});setTimeout(()=>{v.muted=false;},100);const bgm=document.getElementById('bgm');bgm.volume=0.2;bgm.play().catch(()=>{});}};
+  let done=0;const startTime=Date.now();
+  const onDone=()=>{done++;ldText.textContent='预加载 '+done+'/5……';};
+  const finishLoad=()=>{
+    clearInterval(ldTimer);ld.classList.remove('active');
+    document.getElementById('intro-overlay').style.display='';
+    const v=document.getElementById('intro-video');v.muted=true;v.play().catch(()=>{});setTimeout(()=>{v.muted=false;},100);
+    const bgm=document.getElementById('bgm');bgm.volume=0.2;bgm.play().catch(()=>{});
+  };
   // 预加载资源
   ['assets/scene01.png','assets/scene02.png','assets/scene03.png','assets/scene04.png'].forEach(src=>{const i=new Image();i.onload=onDone;i.onerror=onDone;i.src=src;});
   // 字体
   const font=new FontFace('Jinghua LaoSong','url(assets/京華老宋体.ttf)');font.load().then(()=>{document.fonts.add(font);onDone();}).catch(()=>onDone());
-  // 超时
-  setTimeout(()=>{if(ld.classList.contains('active')){clearInterval(ldTimer);ld.classList.remove('active');document.getElementById('intro-overlay').style.display='';document.getElementById('intro-video').play().catch(()=>{});}},12000);
+  // 全部完成 + 最少等2秒才显示标题画面
+  const pollReady=setInterval(()=>{if(done>=5&&Date.now()-startTime>2500){clearInterval(pollReady);finishLoad();}},300);
+  // 超时保护
+  setTimeout(()=>{if(ld.classList.contains('active')){clearInterval(pollReady);finishLoad();}},15000);
   const startMusic=()=>{const m=document.getElementById('bgm');m.play().catch(()=>{});};
   document.querySelector('.it-btn').addEventListener('click',startMusic,{once:true});
 });
@@ -2681,11 +2689,7 @@ function startGame(){
   fog.style.transition='none';fog.classList.add('active');fog.offsetHeight;
   document.getElementById('intro-overlay').classList.add('hidden');
   fog.style.transition='';
-  // 资源已在预加载中缓存——直接过渡
-  const img=new Image();img.src='assets/scene01.png';
-  img.onload=()=>{fog.classList.remove('active');showIntroScene('assets/scene01.png',['这是哪里？'],0);};
-  img.onerror=()=>{fog.classList.remove('active');setTimeout(()=>showIntroScene('assets/scene01.png',['这是哪里？'],0),500);};
-  setTimeout(()=>{if(fog.classList.contains('active')){fog.classList.remove('active');showIntroScene('assets/scene01.png',['这是哪里？'],0);}},8000);
+  showIntroScene('assets/scene01.png',['这是哪里？'],0);
 }
 // === 场景过渡 ===
 function showIntroScene(bg,subtitles,idx){
