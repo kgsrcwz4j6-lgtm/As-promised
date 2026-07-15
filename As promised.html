@@ -2673,12 +2673,17 @@ function startGame(){
   const ld=document.getElementById('loading-overlay');
   ld.querySelector('img').src='assets/loading/'+LOADING_IMGS[Math.floor(Math.random()*LOADING_IMGS.length)];
   ld.classList.add('active');
+  // 随机 loading 文案轮播
+  const LD_TEXTS=['字体加载中……','场景加载中……','陆砚正在赶来的路上……','萤火虫在石碑后闪烁……','神道上的青石板，一块一块醒了……','柏树下的陶罐，数着铜钱……','万历三十八年的风，吹过碑上的字……','石狮右爪有道缝，月亮正从那里漏进来……'];
+  let lt=0;const ldText=ld.querySelector('.ld-text');
+  const ldTimer=setInterval(()=>{ldText.textContent=LD_TEXTS[lt%LD_TEXTS.length];lt++;},1500);
+  ldText.textContent=LD_TEXTS[0];
   // 预加载 scene01 + 字体
   const img=new Image();img.src='assets/scene01.png';
-  img.onload=()=>{ld.classList.remove('active');showIntroScene('assets/scene01.png',['这是哪里？'],0);};
-  img.onerror=()=>{ld.classList.remove('active');fog.classList.remove('active');setTimeout(()=>showIntroScene('assets/scene01.png',['这是哪里？'],0),500);};
+  img.onload=()=>{clearInterval(ldTimer);ld.classList.remove('active');showIntroScene('assets/scene01.png',['这是哪里？'],0);};
+  img.onerror=()=>{clearInterval(ldTimer);ld.classList.remove('active');fog.classList.remove('active');setTimeout(()=>showIntroScene('assets/scene01.png',['这是哪里？'],0),500);};
   // 超时保护 8s
-  setTimeout(()=>{if(ld.classList.contains('active')){ld.classList.remove('active');fog.classList.remove('active');showIntroScene('assets/scene01.png',['这是哪里？'],0);}},8000);
+  setTimeout(()=>{if(ld.classList.contains('active')){clearInterval(ldTimer);ld.classList.remove('active');fog.classList.remove('active');showIntroScene('assets/scene01.png',['这是哪里？'],0);}},8000);
 }
 // === 场景过渡 ===
 function showIntroScene(bg,subtitles,idx){
