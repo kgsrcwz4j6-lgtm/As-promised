@@ -495,7 +495,6 @@ const STATE={
   // 每NPC独立AI对话历史
   npcAIHistories:{liu_er:[],chen_minzhi:[],zhao_laosan:[],wang_po:[],sun_maocai:[]},
   npcAIMode:true, // 是否启用NPC AI模式（默认AI审讯）
-  ttsEnabled:true,   // 是否启用浏览器语音朗读
   // 问江卿禾系统
   askJHCount:{}, // 每名NPC审讯中使用次数 key=npcId
   askJHTotal:0, // 整章使用总次数
@@ -2257,61 +2256,7 @@ function showChapterNav(){
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/sw.js').catch(()=>{});
 }
-// === TTS 语音朗读 ===
-const NPC_VOICES={
-  liu_er:{rate:1.1,pitch:1.0},
-  chen_minzhi:{rate:0.9,pitch:0.95},
-  zhao_laosan:{rate:0.7,pitch:0.8},
-  wang_po:{rate:0.95,pitch:1.1},
-  sun_maocai:{rate:0.85,pitch:0.95},
-};
-let _ttsVoice=null;
-function speak(text,npcId){
-  if(!STATE.ttsEnabled)return;
-  if(!text||text.length<2)return;
-  const s=window.speechSynthesis;if(!s)return;
-  s.cancel();
-  const u=new SpeechSynthesisUtterance(text.replace(/\([^)]*\)/g,'').replace(/[""「」『』]/g,''));
-  u.lang='zh-CN';
-  const vp=NPC_VOICES[npcId]||{rate:0.85,pitch:0.9};
-  u.rate=vp.rate;u.pitch=vp.pitch;u.volume=0.8;
-  if(!_ttsVoice){
-    const voices=s.getVoices();
-    _ttsVoice=voices.find(v=>v.lang.startsWith('zh'))||voices[0];
-    if(!_ttsVoice){s.getVoices();return;}
-  }
-  u.voice=_ttsVoice;
-  s.speak(u);
-}
-function toggleTTS(){
-  STATE.ttsEnabled=!STATE.ttsEnabled;
-  const b=document.getElementById('tts-btn');
-  if(b)b.textContent=STATE.ttsEnabled?'🔊':'🔇';
-  if(!STATE.ttsEnabled)window.speechSynthesis&&speechSynthesis.cancel();
-}
-// 挂钩 addNPC：对话显示后自动朗读
-const _origAddNPC=addNPC;
-addNPC=function(name,text){
-  _origAddNPC(name,text);
-  const id=STATE.npcId||Object.keys(NPCS).find(k=>NPCS[k].name===name);
-  if(id)speak(text,id);
-};
-// 挂钩 addWater：水灵语音更慢
-const _origAddWater=addWater;
-addWater=function(text){
-  _origAddWater(text);
-  if(!STATE.ttsEnabled||!text)return;
-  const s=window.speechSynthesis;if(!s)return;
-  s.cancel();
-  const u=new SpeechSynthesisUtterance(text.replace(/\([^)]*\)/g,''));
-  u.lang='zh-CN';u.rate=0.75;u.pitch=1.0;u.volume=0.7;
-  if(_ttsVoice)u.voice=_ttsVoice;
-  s.speak(u);
-};
-// 确保语音列表加载
-if(window.speechSynthesis)speechSynthesis.getVoices();
 </script>
 <button onclick="if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(()=>{})" style="position:fixed;top:16px;right:16px;z-index:1001;background:transparent;border:1px solid var(--water-cyan);color:var(--water-cyan);font-family:var(--font-song);font-size:.65rem;letter-spacing:.06em;padding:4px 10px;cursor:pointer;border-radius:3px;opacity:.5;transition:all .3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.5'">⛶</button>
-<button id="tts-btn" onclick="toggleTTS()" style="position:fixed;top:40px;right:16px;z-index:1001;background:transparent;border:1px solid var(--water-cyan);color:var(--water-cyan);font-family:var(--font-song);font-size:.65rem;letter-spacing:.06em;padding:4px 10px;cursor:pointer;border-radius:3px;opacity:.5;transition:all .3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.5'">🔊</button>
 </body>
 </html>

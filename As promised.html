@@ -942,7 +942,6 @@ html,body{height:100%;overflow:hidden;font-family:var(--font-body);background:va
 </style>
 <button class="lang-switch" onclick="event.stopPropagation();window.location.href='index_en.html'">🌐 EN</button>
 <button class="fs-btn" onclick="event.stopPropagation();if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(()=>{})">⛶ 全屏</button>
-<button id="tts-btn-ch1" class="fs-btn" onclick="event.stopPropagation();toggleTTSCh1()" style="top:84px;">🔊</button>
 <!-- 开场动画 -->
 <div id="intro-overlay">
   <video id="intro-video" src="assets/enterscene01.mp4" autoplay loop muted playsinline></video>
@@ -2823,35 +2822,6 @@ function showPaper(type){
   v.classList.add('active');
 }
 function closePaper(){document.getElementById('paper-viewer').classList.remove('active');}
-
-// === TTS 语音朗读（陆砚） ===
-let _ttsVoice1=null,_ttsOn1=true;
-function speakLuYan(text){
-  if(!_ttsOn1||!text)return;
-  const s=window.speechSynthesis;if(!s)return;
-  s.cancel();
-  const t=text.replace(/\([^)]*\)/g,'').replace(/[""「」『』]/g,'');
-  if(t.length<2)return;
-  const u=new SpeechSynthesisUtterance(t);
-  u.lang='zh-CN';u.rate=0.8;u.pitch=0.85;u.volume=0.75;
-  if(!_ttsVoice1){
-    const v=s.getVoices();
-    _ttsVoice1=v.find(x=>x.lang.startsWith('zh'))||v[0];
-    if(!_ttsVoice1){s.getVoices();return;}
-  }
-  u.voice=_ttsVoice1;
-  s.speak(u);
-}
-function toggleTTSCh1(){
-  _ttsOn1=!_ttsOn1;
-  const b=document.getElementById('tts-btn-ch1');
-  if(b)b.textContent=_ttsOn1?'🔊':'🔇';
-  if(!_ttsOn1&&window.speechSynthesis)speechSynthesis.cancel();
-}
-// 挂钩 addNPCMsg
-const _origAddNPCMsg=addNPCMsg;
-addNPCMsg=function(t){_origAddNPCMsg(t);setTimeout(()=>speakLuYan(t),100);};
-if(window.speechSynthesis)speechSynthesis.getVoices();
 
 </script>
 
