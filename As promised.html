@@ -2657,11 +2657,15 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('intro-overlay').style.display='none';
   // === 启动 loading 预加载 ===
   const ld=document.getElementById('loading-overlay');
-  ld.querySelector('img').src='assets/loading/'+LOADING_IMGS[Math.floor(Math.random()*LOADING_IMGS.length)];
+  const ldImg=ld.querySelector('img');
+  // 随机标注图（先预加载再用，避免 src="" 时出现占位符）
+  const rndImg=new Image();
+  rndImg.onload=()=>{ldImg.src=rndImg.src;};
+  rndImg.src='assets/loading/'+LOADING_IMGS[Math.floor(Math.random()*LOADING_IMGS.length)];
   ld.classList.add('active');
   const LD_TEXTS=['字体加载中……','场景加载中……','陆砚正在赶来的路上……','萤火虫在石碑后闪烁……','神道上的青石板，一块一块醒了……','柏树下的陶罐，数着铜钱……','万历三十八年的风，吹过碑上的字……','石狮右爪有道缝，月亮正从那里漏进来……'];
   let lt=0;const ldText=ld.querySelector('.ld-text');
-  const ldTimer=setInterval(()=>{ldText.textContent=LD_TEXTS[lt%LD_TEXTS.length];lt++;},1500);
+  const ldTimer=setInterval(()=>{ldText.textContent=LD_TEXTS[lt%LD_TEXTS.length];lt++;},3000);
   ldText.textContent=LD_TEXTS[0];
   let done=0;const startTime=Date.now();
   const onDone=()=>{done++;ldText.textContent='预加载 '+done+'/5……';};
@@ -2677,8 +2681,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   const font=new FontFace('Jinghua LaoSong','url(assets/京華老宋体.ttf)');font.load().then(()=>{document.fonts.add(font);onDone();}).catch(()=>onDone());
   // 全部完成 + 最少等2秒才显示标题画面
   const pollReady=setInterval(()=>{if(done>=5&&Date.now()-startTime>2500){clearInterval(pollReady);finishLoad();}},300);
-  // 超时保护
-  setTimeout(()=>{if(ld.classList.contains('active')){clearInterval(pollReady);finishLoad();}},15000);
   const startMusic=()=>{const m=document.getElementById('bgm');m.play().catch(()=>{});};
   document.querySelector('.it-btn').addEventListener('click',startMusic,{once:true});
 });
