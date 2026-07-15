@@ -2658,10 +2658,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   // === 启动 loading 预加载 ===
   const ld=document.getElementById('loading-overlay');
   const ldImg=ld.querySelector('img');
-  // 随机标注图（先预加载再用，避免 src="" 时出现占位符）
-  const rndImg=new Image();
-  rndImg.onload=()=>{ldImg.src=rndImg.src;};
-  rndImg.src='assets/loading/'+LOADING_IMGS[Math.floor(Math.random()*LOADING_IMGS.length)];
+  // 随机选3张标注图轮播
+  const pool=[...LOADING_IMGS];for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+  const imgs3=pool.slice(0,3).map(f=>'assets/loading/'+f);
+  let ii=0;const nextImg=()=>{const ni=new Image();ni.onload=()=>{ldImg.src=ni.src;};ni.src=imgs3[ii%3];ii++;};
+  nextImg(); // 第一张
+  let imgTimer=setInterval(nextImg,4000); // 4秒轮播标注图
   ld.classList.add('active');
   const LD_TEXTS=['字体加载中……','场景加载中……','陆砚正在赶来的路上……','萤火虫在石碑后闪烁……','神道上的青石板，一块一块醒了……','柏树下的陶罐，数着铜钱……','万历三十八年的风，吹过碑上的字……','石狮右爪有道缝，月亮正从那里漏进来……'];
   let lt=0;const ldText=ld.querySelector('.ld-text');
@@ -2670,7 +2672,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   let done=0;const startTime=Date.now();
   const onDone=()=>{done++;ldText.textContent='预加载 '+done+'/5……';};
   const finishLoad=()=>{
-    clearInterval(ldTimer);ld.classList.remove('active');
+    clearInterval(ldTimer);clearInterval(imgTimer);ld.classList.remove('active');
     document.getElementById('intro-overlay').style.display='';
     const v=document.getElementById('intro-video');v.muted=true;v.play().catch(()=>{});setTimeout(()=>{v.muted=false;},100);
     const bgm=document.getElementById('bgm');bgm.volume=0.2;bgm.play().catch(()=>{});
