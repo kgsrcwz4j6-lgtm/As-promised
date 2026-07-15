@@ -2651,39 +2651,41 @@ document.addEventListener('mouseenter', function(e) {
     _hoverAudio.pause(); _hoverAudio.currentTime = 0; _hoverAudio.play().catch(function() {});
   }
 }, true);
+const LOADING_IMGS=['第1章_陆砚_设定标注.png','第2章_江卿禾_设定标注.png','第3章_方祀_设定标注.png','第4章_萧钺_设定标注.png','第5章_顾冶珩_设定标注.png','第6章_温岐_设定标注.png','第7章_温瑜_设定标注.png','第8章_苏涧_设定标注.png','第9章_云笙_设定标注.png'];
 document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('app').style.display='none';
-  document.getElementById('intro-video').play();
-  const bgm=document.getElementById('bgm');
-  bgm.volume=0.2;
-  bgm.play().catch(()=>{});
-  const startMusic=()=>{bgm.play().catch(()=>{});};
+  document.getElementById('intro-overlay').style.display='none';
+  // === 启动 loading 预加载 ===
+  const ld=document.getElementById('loading-overlay');
+  ld.querySelector('img').src='assets/loading/'+LOADING_IMGS[Math.floor(Math.random()*LOADING_IMGS.length)];
+  ld.classList.add('active');
+  const LD_TEXTS=['字体加载中……','场景加载中……','陆砚正在赶来的路上……','萤火虫在石碑后闪烁……','神道上的青石板，一块一块醒了……','柏树下的陶罐，数着铜钱……','万历三十八年的风，吹过碑上的字……','石狮右爪有道缝，月亮正从那里漏进来……'];
+  let lt=0;const ldText=ld.querySelector('.ld-text');
+  const ldTimer=setInterval(()=>{ldText.textContent=LD_TEXTS[lt%LD_TEXTS.length];lt++;},1500);
+  ldText.textContent=LD_TEXTS[0];
+  let done=0;
+  const onDone=()=>{done++;ldText.textContent='预加载 '+done+'/6……';if(done>=6){clearInterval(ldTimer);ld.classList.remove('active');document.getElementById('intro-overlay').style.display='';const v=document.getElementById('intro-video');v.muted=true;v.play().catch(()=>{});setTimeout(()=>{v.muted=false;},100);const bgm=document.getElementById('bgm');bgm.volume=0.2;bgm.play().catch(()=>{});}};
+  // 预加载资源
+  ['assets/scene01.png','assets/scene02.png','assets/scene03.png','assets/scene04.png'].forEach(src=>{const i=new Image();i.onload=onDone;i.onerror=onDone;i.src=src;});
+  // 字体
+  const font=new FontFace('Jinghua LaoSong','url(assets/京華老宋体.ttf)');font.load().then(()=>{document.fonts.add(font);onDone();}).catch(()=>onDone());
+  // 超时
+  setTimeout(()=>{if(ld.classList.contains('active')){clearInterval(ldTimer);ld.classList.remove('active');document.getElementById('intro-overlay').style.display='';document.getElementById('intro-video').play().catch(()=>{});}},12000);
+  const startMusic=()=>{const m=document.getElementById('bgm');m.play().catch(()=>{});};
   document.querySelector('.it-btn').addEventListener('click',startMusic,{once:true});
-  document.addEventListener('click',startMusic,{once:true});
 });
 
 // === 开场动画 ===
-const LOADING_IMGS=['第1章_陆砚_设定标注.png','第2章_江卿禾_设定标注.png','第3章_方祀_设定标注.png','第4章_萧钺_设定标注.png','第5章_顾冶珩_设定标注.png','第6章_温岐_设定标注.png','第7章_温瑜_设定标注.png','第8章_苏涧_设定标注.png','第9章_云笙_设定标注.png'];
 function startGame(){
   const fog=document.getElementById('fog-overlay');
   fog.style.transition='none';fog.classList.add('active');fog.offsetHeight;
   document.getElementById('intro-overlay').classList.add('hidden');
   fog.style.transition='';
-  // 随机守护灵标注图作 loading 背景
-  const ld=document.getElementById('loading-overlay');
-  ld.querySelector('img').src='assets/loading/'+LOADING_IMGS[Math.floor(Math.random()*LOADING_IMGS.length)];
-  ld.classList.add('active');
-  // 随机 loading 文案轮播
-  const LD_TEXTS=['字体加载中……','场景加载中……','陆砚正在赶来的路上……','萤火虫在石碑后闪烁……','神道上的青石板，一块一块醒了……','柏树下的陶罐，数着铜钱……','万历三十八年的风，吹过碑上的字……','石狮右爪有道缝，月亮正从那里漏进来……'];
-  let lt=0;const ldText=ld.querySelector('.ld-text');
-  const ldTimer=setInterval(()=>{ldText.textContent=LD_TEXTS[lt%LD_TEXTS.length];lt++;},1500);
-  ldText.textContent=LD_TEXTS[0];
-  // 预加载 scene01 + 字体
+  // 资源已在预加载中缓存——直接过渡
   const img=new Image();img.src='assets/scene01.png';
-  img.onload=()=>{clearInterval(ldTimer);ld.classList.remove('active');showIntroScene('assets/scene01.png',['这是哪里？'],0);};
-  img.onerror=()=>{clearInterval(ldTimer);ld.classList.remove('active');fog.classList.remove('active');setTimeout(()=>showIntroScene('assets/scene01.png',['这是哪里？'],0),500);};
-  // 超时保护 8s
-  setTimeout(()=>{if(ld.classList.contains('active')){clearInterval(ldTimer);ld.classList.remove('active');fog.classList.remove('active');showIntroScene('assets/scene01.png',['这是哪里？'],0);}},8000);
+  img.onload=()=>{fog.classList.remove('active');showIntroScene('assets/scene01.png',['这是哪里？'],0);};
+  img.onerror=()=>{fog.classList.remove('active');setTimeout(()=>showIntroScene('assets/scene01.png',['这是哪里？'],0),500);};
+  setTimeout(()=>{if(fog.classList.contains('active')){fog.classList.remove('active');showIntroScene('assets/scene01.png',['这是哪里？'],0);}},8000);
 }
 // === 场景过渡 ===
 function showIntroScene(bg,subtitles,idx){
