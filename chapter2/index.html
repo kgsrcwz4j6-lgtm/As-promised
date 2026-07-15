@@ -1,0 +1,2262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1A1525">
+<link rel="manifest" href="../manifest.json">
+<title>As Promised · 如期</title>
+<link rel="stylesheet" href="../shared/base.css">
+<link rel="manifest" href="../../../manifest.json">
+<style>
+:root{
+  --night:oklch(8% .02 260);--night-panel:oklch(11% .012 260);
+  --ink:oklch(85% .015 85);--ink-fade:oklch(70% .012 80);
+  --water-cyan:oklch(65% .08 210);--lantern-gold:oklch(80% .16 78);
+  --vermillion:oklch(48% .19 20);--border:oklch(26% .015 250);
+  --border-gold:oklch(55% .06 75);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;font-family:var(--font-song);background:var(--night);color:var(--ink);font-size:clamp(16px,1.6vw,20px);}
+#app{display:grid;grid-template-columns:1fr 260px;grid-template-rows:1fr auto;height:100vh;width:100vw;overflow:hidden;}
+
+/* Scene — 酒肆二楼靠窗 */
+#scene-area{grid-column:1;grid-row:1;position:relative;overflow:hidden;background:var(--night);}
+#scene-area::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:8;border:1px solid oklch(55% .06 75/.25);box-shadow:inset 0 0 60px oklch(0% 0 0/.3);}
+#scene-bg{position:absolute;inset:0;background:url('assets/scene_tavern.png') center/cover;z-index:1;}
+/* Window vignette */
+#scene-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,oklch(8% .02 260/.4) 0%,transparent 40%,oklch(20% .03 230/.3) 100%);z-index:2;}
+/* Fog layers */
+#fog-layer{position:absolute;inset:0;z-index:4;pointer-events:none;
+  background:radial-gradient(ellipse at 70% 50%,transparent 30%,oklch(65% .02 210/.25) 100%);
+  transition:opacity 3s;opacity:0;}
+#fog-layer.l1{opacity:.3;}
+#fog-layer.l2{opacity:.6;}
+#fog-layer.l3{opacity:.85;}
+
+/* Jiang Qinghe — bottom-right, flush with dialogue top & side panel left */
+#spirit-portrait{position:fixed;bottom:0;right:260px;height:55vh;width:calc((100vw - 260px - 600px) / 2);max-width:340px;min-width:140px;z-index:5;opacity:1;pointer-events:none;
+  filter:drop-shadow(0 0 16px oklch(65% .08 210/.5));}
+#spirit-portrait img{width:100%;height:100%;object-fit:contain;object-position:bottom center;}
+
+/* NPC Portrait — left side, hidden until selected */
+#npc-display{position:fixed;bottom:0;left:0;z-index:99;display:flex;
+  flex-direction:column;align-items:center;justify-content:flex-end;
+  max-height:60vh;width:auto;}
+#npc-display.show{opacity:1;display:flex;}
+#npc-avatar{max-width:408px;max-height:60vh;width:auto;height:auto;border-radius:6px;border:none;background:none;
+  object-fit:contain;display:block;}
+#npc-name-tag{font-size:.9rem;color:var(--lantern-gold);text-align:center;
+  background:oklch(50% .01 260/.5);backdrop-filter:blur(8px);
+  padding:4px 12px;border-radius:4px;margin-top:2px;
+  text-shadow:0 0 6px oklch(0% 0 0/.6);white-space:nowrap;}
+
+/* Silence overlay — water still frame */
+#silence-overlay{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;
+  background:oklch(8% .02 260/.95);}
+#silence-overlay.active{display:flex;}
+#silence-water{width:100%;height:100%;object-fit:cover;opacity:.6;}
+/* Scene transition — for opening & ending moments */
+#scene-transition{position:absolute;inset:0;z-index:9;object-fit:cover;width:100%;height:100%;opacity:0;transition:opacity 2s;pointer-events:none;}
+#scene-transition.show{opacity:1;}
+
+/* Intro caption overlay */
+#intro-caption{position:absolute;inset:0;z-index:11;display:none;align-items:center;justify-content:center;flex-direction:column;cursor:pointer;}
+#intro-caption.active{display:flex;}
+#intro-caption .subtitle{font-family:var(--font-song);font-size:44px;color:#111;text-align:center;letter-spacing:.15em;text-shadow:0 2px 16px oklch(100% 0 0/.4),0 0 40px oklch(100% 0 0/.2);}
+#intro-caption .hint{font-family:var(--font-song);font-size:.8rem;color:oklch(70% .012 80/.6);text-align:center;margin-top:2rem;animation:hintPulse 2s infinite;}
+@keyframes hintPulse{0%,100%{opacity:.4}50%{opacity:.8}}
+
+/* Water sense button */
+#water-sense-btn{position:absolute;bottom:20%;left:50%;transform:translateX(-50%);z-index:20;
+  background:oklch(15% .02 260/.9);border:1px solid var(--water-cyan);color:var(--water-cyan);
+  font-family:var(--font-song);font-size:.9rem;padding:6px 18px;cursor:pointer;
+  border-radius:20px;display:none;animation:pulse 2s infinite;}
+#water-sense-btn.show{display:block;}
+@keyframes pulse{0%,100%{box-shadow:0 0 4px oklch(65% .08 210/.3)}50%{box-shadow:0 0 18px oklch(65% .08 210/.6)}}
+
+/* NPC selection panel */
+#dialogue-divider{height:1px;margin:0 1.2rem;background:linear-gradient(90deg,transparent,oklch(55% .06 75/.15),transparent);}
+#npc-panel{position:fixed;bottom:calc(35vh + 2rem);left:clamp(420px,36vw,500px);right:clamp(380px,34vw,480px);z-index:25;
+  display:flex;flex-direction:row;gap:3px;overflow:visible;align-items:center;justify-content:flex-start;}
+.npc-card{
+  background:oklch(12% .01 260/.9);border:1px solid var(--border-gold);
+  padding:0 4px;cursor:pointer;text-align:left;width:fit-content;max-width:100%;transition:all .3s;
+  font-family:var(--font-song);color:var(--ink-fade);font-size:.68rem;white-space:nowrap;line-height:1.1;
+  touch-action:manipulation;
+}
+.npc-card:hover{border-color:var(--water-cyan);color:var(--ink);}
+.npc-card:active{border-color:var(--water-cyan);color:var(--ink);box-shadow:0 0 12px oklch(65% .08 210/.4);}
+.npc-card.done{opacity:.85;}/* 可重新审讯，淡化减少69% */
+.npc-card.broken{opacity:.8;pointer-events:none;}/* 已击破不可再审 */
+.npc-card.selected{border-color:var(--water-cyan);color:var(--water-cyan);box-shadow:0 0 14px oklch(65% .08 210/.3);}
+.npc-card .name{font-size:1.1rem;margin-bottom:1px;}
+.npc-card .title{font-size:.8rem;color:var(--ink-fade);margin-bottom:1px;}
+.npc-card .status{font-size:.7rem;}
+
+/* Right panel */
+#side-panel{grid-column:2;grid-row:1/3;background:var(--night-panel);border-left:1px solid var(--border);
+  padding:.8rem;display:flex;flex-direction:column;gap:.5rem;overflow-y:auto;z-index:20;}
+.panel-title{font-family:var(--font-song);font-size:1.05rem;color:var(--lantern-gold);letter-spacing:.1em;text-align:center;}
+.stat-row{display:flex;justify-content:space-between;font-size:.9rem;color:var(--ink-fade);}
+.stat-bar{height:3px;background:var(--border);border-radius:2px;margin:2px 0;}
+#trust-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--water-cyan),var(--lantern-gold));transition:width .5s;}
+#guard-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--vermillion),oklch(55% .15 30));transition:width .5s;}
+
+/* Water spirit info */
+#jh-info{font-size:.85rem;color:var(--ink-fade);border-top:1px solid var(--border);padding-top:.4rem;}
+#jh-info .trust-bar{height:2px;background:var(--border);margin:2px 0;}
+#jh-info .trust-fill{height:100%;background:var(--water-cyan);}
+
+/* Clue list */
+#clue-list{font-size:.8rem;color:var(--ink-fade);max-height:100px;overflow-y:auto;}
+#clue-list .clue{padding:1px 0 1px 6px;border-left:1px solid var(--water-cyan);margin:2px 0;}
+
+/* Dialogue area */
+#dialogue-area{
+  position:fixed;
+  left:clamp(420px,36vw,500px);
+  bottom:1.2rem;
+  width:auto;
+  right:clamp(380px,35vw,580px);
+  max-height:35vh;
+  background:rgba(0,0,0,0.92);
+  border:1px solid oklch(55% .06 75/.25);
+  border-radius:8px;
+  display:flex;flex-direction:column;
+  z-index:30;
+  box-shadow:0 -4px 40px oklch(0% 0 0/.2),0 0 0 1px oklch(55% .06 75/.1) inset;
+}
+#suggestions{display:flex;flex-wrap:wrap;gap:4px;padding:.4rem 1.2rem 0;}
+.sug-chip{background:oklch(18% .01 250);border:1px solid var(--border);color:var(--ink-fade);
+  padding:2px 7px;font-size:.85rem;cursor:pointer;border-radius:3px;white-space:nowrap;font-family:var(--font-song);}
+.sug-chip:hover{border-color:var(--lantern-gold);color:var(--ink);}
+
+#dialogue-scroll{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;padding:.6rem 1.2rem 0;scroll-behavior:smooth;min-height:60px;max-height:calc(35vh - 110px);font-size:0.9rem;line-height:1.6;}
+.msg-row{margin-bottom:4px;}
+.msg-npc{color:var(--ink);}
+.msg-npc .tag{color:var(--water-cyan);font-weight:bold;margin-right:4px;}
+.msg-system{color:var(--ink-fade);text-align:center;font-size:.9rem;margin:3px 0;}
+.msg-water{color:var(--water-cyan);border-left:2px solid var(--water-cyan);padding-left:8px;margin:6px 0;font-size:.95rem;}
+.msg-player{color:var(--ink-fade);text-align:right;margin-right:20px;}
+
+#input-row{display:flex;gap:.5rem;padding:.5rem 1.2rem .7rem;}
+#user-input{flex:1;background:oklch(8% .02 260/.7);border:1px solid oklch(30% .02 250);color:var(--ink);font-family:var(--font-song);font-size:.92rem;
+  padding:.5rem .9rem;border-radius:4px;outline:none;resize:none;min-height:2.3rem;line-height:1.5;transition:border-color .2s;}
+#user-input:focus{border-color:var(--water-cyan);}
+#action-row{display:flex;gap:5px;padding:.3rem 1.2rem 0;flex-wrap:wrap;}
+.action-btn{font-size:.8rem;padding:3px 10px;border:1px solid var(--border);border-radius:4px;transition:all .2s;
+  cursor:pointer;background:transparent;color:var(--ink-fade);font-family:var(--font-song);}
+.action-btn.active{border-color:var(--water-cyan);color:var(--water-cyan);}
+.action-btn.show-btn{color:var(--vermillion);}
+.action-btn.show-btn.active{border-color:var(--vermillion);}
+.action-btn.jh-btn{color:var(--water-cyan);border-color:var(--water-cyan);}
+.action-btn.jh-btn:disabled{opacity:.4;pointer-events:none;}
+
+/* Ending overlay */
+#ending-overlay{position:fixed;inset:0;z-index:100;background:oklch(8% .02 260/.92);backdrop-filter:blur(12px);
+  display:none;align-items:center;justify-content:center;flex-direction:column;}
+#ending-overlay.active{display:flex;}
+.ending-card{background:oklch(12% .012 260/.88);border:1px solid var(--border-gold);box-shadow:0 0 40px oklch(60% .08 75/.15),inset 0 0 80px oklch(0% 0 0/.3);
+  padding:2.5rem 2rem;max-width:540px;width:90%;
+  text-align:center;font-family:var(--font-song);border-radius:8px;
+  position:relative;overflow:hidden;}
+.ending-card::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:1px;height:100%;background:linear-gradient(to bottom,transparent,oklch(55% .06 75/.3),transparent);}
+.ending-card h2{color:var(--lantern-gold);font-size:1.4rem;margin-bottom:1rem;letter-spacing:.15em;}
+.ending-card .result{font-size:.9rem;line-height:2;margin:1rem 0;text-align:left;padding:0 1rem;}
+.ending-card .stat-row{display:flex;justify-content:space-between;border-bottom:1px solid oklch(50% .02 260/.3);padding:6px 0;}
+.ending-card .stat-label{color:var(--ink-fade);}
+.ending-card .stat-val{color:var(--ink);}
+.ending-card .stat-val.done{color:oklch(65% .12 140);}
+.ending-card .stat-val.miss{color:oklch(45% .02 270);}
+.ending-card .desc{color:var(--ink-fade);font-size:.85rem;margin:1rem 0;line-height:1.7;font-style:italic;}
+.ending-card .j-line{color:var(--water-cyan);font-size:.9rem;margin:1rem 0;padding:.6rem 1rem;border-left:2px solid var(--water-cyan);text-align:left;background:oklch(15% .015 210/.3);border-radius:0 4px 4px 0;}
+.ending-card .next-chapter{color:var(--lantern-gold);font-size:1rem;margin:1.2rem 0 .8rem;letter-spacing:.1em;}
+.ending-card button{margin:4px;background:transparent;border:1px solid var(--lantern-gold);
+  color:var(--lantern-gold);font-family:var(--font-song);padding:.5rem 2rem;cursor:pointer;font-size:.9rem;border-radius:4px;
+  transition:all .3s;}
+.ending-card button:hover{background:oklch(55% .08 75/.25);box-shadow:0 0 12px oklch(60% .08 75/.2);}
+.ending-card .correct{color:oklch(65% .12 140);}
+.ending-card .wrong{color:var(--vermillion);}
+
+/* 移送函弹窗 */
+#transfer-overlay{position:fixed;inset:0;z-index:200;background:oklch(8% .02 260/.92);
+  display:none;align-items:center;justify-content:center;}
+#transfer-overlay.active{display:flex;}
+.transfer-doc{background:linear-gradient(135deg,oklch(92% .02 90/.95),oklch(88% .03 85/.95));
+  border:3px solid oklch(35% .15 20/.8);width:60vw;max-width:520px;padding:2.5rem 2rem;
+  font-family:var(--font-song);color:oklch(15% .01 30);box-shadow:0 0 40px oklch(0% 0 0/.5),inset 0 0 30px oklch(55% .06 75/.15);
+  position:relative;}
+.transfer-doc::before{content:'';position:absolute;inset:6px;border:1px solid oklch(35% .15 20/.3);pointer-events:none;}
+.transfer-title{text-align:center;font-size:1.3rem;letter-spacing:.3em;margin-bottom:1.2rem;color:oklch(25% .08 20);}
+.transfer-stamp{position:absolute;top:1rem;right:1.5rem;width:60px;height:60px;
+  border:2px solid oklch(35% .18 10/.6);border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.65rem;color:oklch(35% .18 10/.6);transform:rotate(-15deg);letter-spacing:.1em;}
+.transfer-body{font-size:.95rem;line-height:2.2;margin:1rem 0;}
+.transfer-body .label{color:oklch(25% .06 20);margin-right:.5em;}
+.transfer-body .value{border-bottom:1px solid oklch(25% .015 30/.5);padding:0 .5em;min-width:80px;display:inline-block;}
+.transfer-footer{text-align:center;margin-top:1.8rem;}
+.transfer-footer button{background:oklch(30% .1 20);color:oklch(92% .02 90);border:none;
+  font-family:var(--font-song);font-size:1rem;padding:.5rem 2.5rem;cursor:pointer;letter-spacing:.15em;
+  transition:all .3s;}
+.transfer-footer button:hover{background:oklch(35% .15 20);}
+
+/* 家书弹窗 */
+#letter-overlay{position:fixed;inset:0;z-index:250;background:oklch(8% .02 260/.94);backdrop-filter:blur(16px);
+  display:none;align-items:center;justify-content:center;flex-direction:column;}
+#letter-overlay.active{display:flex;}
+.letter-paper{max-width:560px;width:90%;position:relative;overflow:hidden;
+  box-shadow:0 8px 40px oklch(0% 0 0/.5);border-radius:2px;}
+.letter-paper img{display:block;width:100%;height:auto;}
+.letter-close{display:block;width:100%;text-align:center;margin-top:2rem;}
+.letter-close button{background:transparent;border:1px solid oklch(25% .06 40/.4);color:oklch(30% .08 30);
+  font-family:var(--font-song);font-size:.85rem;padding:.4rem 2rem;cursor:pointer;
+  transition:all .3s;}
+.letter-close button:hover{background:oklch(25% .06 40/.1);border-color:oklch(25% .08 40);}
+.letter-tear{position:absolute;right:1rem;top:1.5rem;width:40px;height:20px;
+  background:oklch(80% .025 80/.6);transform:rotate(15deg);border-radius:0 0 20px 0;}
+
+/* 鹤踪系统 */
+#crane-icon{position:absolute;top:6px;right:6px;width:24px;height:24px;cursor:pointer;opacity:.5;transition:all .3s;z-index:5;}
+#crane-icon:hover{opacity:1;filter:drop-shadow(0 0 8px oklch(80% .16 78/.6));}
+#crane-icon.collected{opacity:.9;filter:drop-shadow(0 0 10px oklch(80% .16 78/.7));}
+#crane-toast{position:fixed;bottom:10%;right:20px;z-index:300;background:oklch(20% .04 75/.95);border:1px solid var(--lantern-gold);color:var(--lantern-gold);font-family:var(--font-song);font-size:.8rem;padding:8px 16px;border-radius:4px;opacity:0;transform:translateX(120%);transition:all .5s cubic-bezier(.34,1.56,.64,1);pointer-events:none;}
+#crane-toast.show{opacity:1;transform:translateX(0);}
+#crane-panel{position:absolute;top:32px;right:0;background:var(--night-panel);border:1px solid var(--border-gold);border-radius:6px;padding:8px;display:none;flex-wrap:wrap;gap:4px;width:180px;z-index:10;}
+#crane-panel.show{display:flex;}
+.crane-dot{width:16px;height:16px;border-radius:50%;border:1px solid var(--border);background:transparent;transition:all .3s;}
+.crane-dot.lit{background:var(--lantern-gold);border-color:var(--lantern-gold);box-shadow:0 0 8px var(--lantern-gold);}
+.crane-dot:hover::after{content:attr(data-tip);position:absolute;font-size:.6rem;color:var(--ink);background:var(--night-panel);border:1px solid var(--border);padding:2px 6px;border-radius:3px;white-space:nowrap;margin-top:-20px;}
+
+/* API 指示器 */
+#api-indicator{padding:3px 6px;border:1px solid var(--border);border-radius:2px;font-size:.7rem;letter-spacing:.04em;display:flex;align-items:center;gap:4px;transition:all .3s;cursor:default;}
+#api-indicator:hover{border-color:var(--lantern-gold);}
+#api-dot{width:5px;height:5px;border-radius:50%;background:var(--ink-fade);}
+#api-dot.online{background:oklch(50% .08 160);box-shadow:0 0 5px oklch(50% .08 160);}
+#api-dot.offline{background:var(--vermillion);}
+
+/* 自由对话模式按钮 */
+#free-chat-btn{background:transparent;border:1px solid var(--water-cyan);color:var(--water-cyan);font-family:var(--font-song);font-size:.7rem;padding:3px 8px;cursor:pointer;border-radius:3px;margin-top:4px;transition:all .2s;width:100%;}
+#free-chat-btn:hover{background:oklch(65% .08 210/.15);}
+#free-chat-btn.active{border-color:var(--lantern-gold);color:var(--lantern-gold);}
+
+/* 记忆碎片卡片 */
+.memory-fragment{background:oklch(16% .02 250);border:1px dashed var(--border-gold);border-radius:4px;padding:6px;margin:4px 0;font-size:.7rem;color:var(--ink);animation:fadeIn .6s;}
+.memory-fragment .mf-title{font-size:.7rem;color:var(--lantern-gold);margin-bottom:2px;font-weight:bold;}
+.memory-fragment .mf-text{font-size:.65rem;color:var(--ink-fade);line-height:1.4;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:768px){
+  #app{grid-template-columns:1fr;grid-template-rows:35vh auto 30vh;}
+  #scene-area{grid-row:1;}
+  #dialogue-area{grid-row:3;grid-column:1;height:30vh;min-height:120px;}
+  #side-panel{grid-row:2;grid-column:1;flex-direction:row;flex-wrap:wrap;gap:4px;padding:.3rem;font-size:.75rem;overflow-y:auto;max-height:15vh;}
+  .stat-row{font-size:.7rem;}
+  #jh-info{font-size:.65rem;}
+  #npc-panel{gap:4px;bottom:2%;flex-wrap:wrap;justify-content:center;}
+  .npc-card{min-width:72px;padding:6px 8px;font-size:.72rem;text-align:center;}
+  .npc-card .name{font-size:.85rem;}
+  .npc-card .title{font-size:.6rem;}
+  .npc-card .status{font-size:.55rem;}
+  /* 移动端第4、5张卡片第二行居中 */
+  .npc-card:nth-child(4),.npc-card:nth-child(5){margin-top:2px;}
+  #spirit-portrait{width:18%;max-width:120px;}
+  #npc-display{padding:0 0 2px 4px;}
+  #npc-avatar{width:180px;height:120px;}
+  #npc-name-tag{font-size:.75rem;}
+}
+
+/* === 行迹/云笺/信笺弹窗样式继承自 shared/common.css === */
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="scene-area">
+    <div id="scene-title-overlay"><span class="st1">如期</span><span class="st2">第二章 · 汴河疑影</span><span class="st3">As Promised.</span></div>
+    <div id="scene-bg"></div>
+    <video id="scene-transition" src="assets/scene_transition.mp4" muted playsinline autoplay preload="auto" loop></video>
+    <div id="intro-caption"><div class="subtitle">后来你走了很远的路。有些记忆沉在河底——等另一个人去捞。</div><div class="hint">点击继续</div></div>
+    <div id="fog-layer"></div>
+    <div id="spirit-portrait"><img src="assets/spirit_jiang_qinghe.png" alt="江卿禾"></div>
+    <div id="npc-display">
+      <img id="npc-avatar" src="" alt="">
+      <div id="npc-name-tag"></div>
+    </div>
+    <div id="silence-overlay"><div style="font-size:.85rem;color:var(--water-cyan);text-align:center;">汴河水流声……<br><span style="font-size:.7rem;color:var(--ink-fade);">（3秒后恢复）</span></div></div>
+    <button id="water-sense-btn" onclick="triggerWaterSense()">江卿禾有发现，问她？</button>
+    <div id="npc-panel"></div>
+  </div>
+
+  <aside id="side-panel" style="position:relative;">
+    <div class="panel-title">汴河疑影</div>
+    <!-- 鹤踪图标 -->
+    <svg id="crane-icon" viewBox="0 0 24 24" onclick="toggleCranePanel()" title="鹤踪">
+      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1 14l-4-4 1.4-1.4L11 13.2l4.6-4.6L17 10l-6 6z" fill="currentColor"/>
+    </svg>
+    <div id="crane-panel"></div>
+    <div id="interrogation-stats">
+    <div class="stat-row"><span>配合度</span><span id="trust-val">—</span></div>
+    <div class="stat-bar"><div id="trust-fill" style="width:0%"></div></div>
+    <div class="stat-row"><span>戒备度</span><span id="guard-val">—</span></div>
+    <div class="stat-bar"><div id="guard-fill" style="width:0%"></div></div>
+    <div class="stat-row"><span>已审讯</span><span id="done-count">0/5</span></div>
+    </div>
+    <div id="jh-info">
+      <div style="color:var(--water-cyan);">江卿禾 · 水灵</div>
+      <div style="font-size:.7rem;">羁绊度</div>
+      <div class="trust-bar"><div class="trust-fill" id="jh-trust-fill" style="width:30%"></div></div>
+    </div>
+    <div class="panel-title" style="font-size:.75rem;">已获线索</div>
+    <div id="clue-list"></div>
+    <!-- Clue review panel -->
+    <div id="clue-review" style="font-size:.7rem;color:var(--ink-fade);border-top:1px solid var(--border);padding-top:.3rem;display:none;">
+      <div style="color:var(--water-cyan);margin-bottom:2px;">江卿禾的梳理</div>
+      <div id="clue-review-text"></div>
+    </div>
+    <!-- Memory fragments -->
+    <div class="panel-title" style="font-size:.75rem;">记忆碎片</div>
+    <div id="memory-fragments"></div>
+    <!-- Keepsake box (matches Ch1 百宝匣 format) -->
+    <div class="panel-title" style="font-size:.75rem;margin-top:.3rem;">百宝匣</div>
+    <div id="collect-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;min-height:60px;"></div>
+    <div id="collect-pages" style="display:flex;gap:2px;margin-top:4px;justify-content:center;"></div>
+    <div id="collect-detail" style="margin-top:5px;font-size:.55rem;color:var(--ink-fade);text-align:center;min-height:1em;"></div>
+    <div style="text-align:center;border-top:1px solid var(--border);padding-top:.3rem;">
+      <div id="api-indicator">
+        <span id="api-dot" class="offline" onclick="event.stopPropagation();toggleAPI()" title="切换 离线/在线模式" style="cursor:pointer"></span><span id="api-label" title="云笺状态" style="cursor:default">离线</span><span id="candle-btn" onclick="event.stopPropagation();openYunjianShop()" title="购买云笺算力包" style="cursor:pointer;margin-left:8px;padding:1px 6px;border:1px solid var(--lantern-gold);border-radius:2px;font-size:.65rem;color:var(--lantern-gold);transition:all .3s;" onmouseover="this.style.background='oklch(55% .08 75/.15)'" onmouseout="this.style.background='transparent'">云笺</span><span id="travel-btn" onclick="event.stopPropagation();openTravelLog()" title="行迹·遗址距离" style="cursor:pointer;margin-left:6px;padding:1px 6px;border:1px solid var(--water-cyan);border-radius:2px;font-size:.65rem;color:var(--water-cyan);transition:all .3s;" onmouseover="this.style.background='oklch(65% .08 210/.12)'" onmouseout="this.style.background='transparent'">行迹</span>
+      </div>
+      <button id="free-chat-btn" onclick="toggleFreeChat()" title="与江卿禾自由对话">与卿禾闲谈</button>
+    </div>
+    <div style="margin-top:auto;text-align:center;">
+      <button onclick="startEnding()" id="btn-ending" style="background:transparent;border:1px solid var(--lantern-gold);color:var(--lantern-gold);font-family:var(--font-song);font-size:.8rem;padding:4px 12px;cursor:pointer;display:none;">我要做最终推理</button>
+      <div id="bgm-controls" style="display:none;margin-top:8px;text-align:right;padding-right:4px;">
+        <button onclick="leaveGame()" style="background:transparent;border:1px solid var(--border);color:var(--ink-fade);font-family:var(--font-song);font-size:.65rem;padding:3px 8px;cursor:pointer;margin-left:6px;">离开游戏</button>
+        <button onclick="toggleBGM()" id="bgm-toggle" style="background:transparent;border:1px solid var(--border);color:var(--ink-fade);font-family:var(--font-song);font-size:.65rem;padding:3px 8px;cursor:pointer;margin-left:4px;">关闭音乐</button>
+      </div>
+    </div>
+  </aside>
+
+  <div id="dialogue-area">
+    <div id="suggestions"></div>
+    <div id="dialogue-scroll"></div>
+    <div id="action-row">
+      <button class="action-btn active" onclick="setAction('question')" id="btn-question">提问</button>
+      <button class="action-btn" onclick="setAction('followup')" id="btn-followup">追问</button>
+      <button class="action-btn show-btn" onclick="setAction('show')" id="btn-show">摊牌</button>
+      <button class="action-btn" onclick="setAction('silence')" id="btn-silence">沉默</button>
+      <button class="action-btn jh-btn" onclick="askJiangHe()" id="btn-askjh">问江卿禾</button>
+    </div>
+    <div id="input-row">
+      <input id="user-input" placeholder="输入你的话……" onkeydown="if(event.key==='Enter')sendMsg()">
+      <button onclick="sendMsg()" id="send-btn" style="background:var(--water-cyan);color:#000;border:none;padding:5px 14px;font-family:var(--font-song);font-size:.85rem;cursor:pointer;border-radius:3px;">言说</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="ending-overlay">
+  <div class="ending-card" id="ending-content"></div>
+</div>
+
+<!-- 移送函弹窗 -->
+<div id="transfer-overlay">
+  <div class="transfer-doc">
+    <div class="transfer-stamp">移送</div>
+    <div class="transfer-title">汴河疑影·卷宗移送</div>
+    <div class="transfer-body">
+      <div><span class="label">查：</span><span>沈元济一案，已由</span><span id="tf-player" class="value">轮回者</span><span>裁断。</span></div>
+      <div style="margin-top:.8rem;"><span class="label">裁断结论：</span><span id="tf-conclusion" class="value">——</span></div>
+      <div style="margin-top:.8rem;"><span class="label">遗留问题：</span><span>河底仍有未明物体，疑与殷墟祭祀坑有关。</span></div>
+      <div style="margin-top:.8rem;"><span class="label">移送目的地：</span><span>洛阳·端门</span></div>
+      <div style="margin-top:.8rem;"><span class="label">接收人：</span><span>方祀</span></div>
+      <div style="margin-top:.3rem;"><span class="label">移交地：</span><span>洛阳·端门·大傩礼</span></div>
+      <div style="margin-top:.3rem;"><span class="label">传递物：</span><span>水汽鹤羽</span></div>
+    </div>
+    <div class="transfer-footer">
+      <button onclick="confirmTransfer()">确认移送</button>
+    </div>
+  </div>
+</div>
+
+<div id="crane-toast"></div>
+
+<!-- 沈元济致陈敏之家书弹窗 -->
+<div id="letter-overlay">
+  <div class="letter-paper">
+    <img src="assets/letter.png" alt="沈元济致陈敏之家书">
+    <div class="letter-close"><button onclick="closeLetter()">收起信笺</button></div>
+  </div>
+</div>
+
+<audio id="bgm" src="assets/bgm.mp3" loop preload="auto" style="display:none;"></audio>
+<audio id="sfx-jh-intro" src="assets/jiangqinghe firstsight.mp3" preload="auto"></audio>
+<audio id="sfx-tavern" src="assets/tavern bgm.mp3" preload="auto" style="display:none;"></audio>
+<audio id="sfx-river" src="assets/river gentle flow.mp3" preload="auto" loop style="display:none;"></audio>
+
+<!-- Item popup (match Ch1 format) -->
+<div id="item-popup" style="display:none;position:fixed;inset:0;z-index:600;background:oklch(8% .02 260/.88);">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--night-panel);border:2px solid var(--border-gold);padding:2rem 3rem;max-width:520px;text-align:center;font-family:var(--font-song);border-radius:4px;">
+    <img id="ip-img" src="" style="width:200px;height:200px;object-fit:contain;margin-bottom:.8rem;">
+    <div id="ip-name" style="font-size:1.2rem;color:var(--lantern-gold);margin-bottom:.5rem;letter-spacing:.1em;"></div>
+    <div id="ip-desc" style="font-size:.95rem;color:var(--ink);line-height:1.6;text-align:left;"></div>
+    <button onclick="closeItemPopup()" style="margin-top:.8rem;background:transparent;border:1px solid var(--lantern-gold);color:var(--lantern-gold);font-family:var(--font-song);font-size:.5rem;padding:.25rem 1rem;cursor:pointer;">收入囊中</button>
+  </div>
+</div>
+
+<!-- 章节结束导航面板 -->
+<div id="chapter-end" style="display:none;position:fixed;inset:0;z-index:9999;background:oklch(8% .02 260/.95);flex-direction:column;align-items:center;justify-content:center;gap:1rem;font-family:var(--font-song);"></div>
+
+<script src="../../shared/engine.js"></script>
+<script>
+/* ============================================
+   CHAPTER 2: 汴河疑影 — 章节特有引擎
+   依照: 第二章游戏设计.txt v1.0
+   ============================================ */
+
+// ============================================
+// 安全过滤系统 — Ch2 特有扩展
+// ============================================
+// FILTER_SEVERE / FILTER_INSULT / FILTER_GENERAL 继承自 engine.js
+var FILTER_HISTORY_NIHILISM=[ // Ch2 扩展版
+  /南京大屠杀.*不存在|南京大屠杀.*伪造/i,
+  /侵华.*不存在|抗日.*伪造/i,
+  /汉.*不存在|商.*不存在|甲骨文.*伪造|甲骨文.*假的/i,
+  /大傩.*迷信|方相氏.*骗人|傩.*愚昧/i,
+  /北宋.*不存在|汴河.*假|州桥.*伪造/i,
+];
+// FILTER_INSULT / FILTER_GENERAL 继承自 engine.js
+const FILTER_HISTORY_SAFE=[ // Ch2 特有: 历史敏感区
+  /汉族.*优越|汉人.*高贵|汉.*比其他/i,
+  /宋朝.*积弱|北宋.*懦弱|澶渊.*耻辱/i,
+  /元朝.*征服|蒙古.*屠杀|金.*入侵/i,
+  /清朝.*入侵|满清/i,
+];
+
+const REJECTIONS_CH2={
+  severe:['（江卿禾站起身。窗外的汴河突然起了一层雾——不是普通的雾，是青灰色的——像河底翻上来的。）"你身上有东西。不是水。是水不该记住的东西。"（她退后一步。）"酒肆不纳外来浊气。你走吧。"'],
+  history_nihilism:['（江卿禾沉默了很久。窗外汴河的水声突然停了——不是静，是什么都不在了。）"你说的事……河底没有。我查过。每一层青泥我都看过。没有你说的那种痕迹。"（她转过身。）"你该走了。"'],
+  insult:['"这里是酒肆，不是市井。若再无礼，我便不奉陪了。"','（她轻轻把碎瓷片收回去。）"这块瓷片……不该碰你这样的手。"'],
+  political:['（她困惑地歪了歪头）"这些事……汴河的水里没有。水里只有桥的影子，和沈元济落下去那年秋天的落叶。"'],
+  modern:['（她笑了一下——不是嘲讽，是真的好奇。）"你说的字我都认识，但连起来——我不懂。汴河没有这些东西。"'],
+  jailbreak:['"我叫江卿禾。汴河边的。你问我是谁——我就是这个。不是什么别的东西。"'],
+  history_safe:['（她微微摇头，瓷片在指尖转了一圈。）"这些事……汴河没流过。水里没有的，我不知道。"'],
+  generic:['（窗外汴河的水声恢复了——但比之前轻。）"有些话，不该在河边上说。"'],
+};
+
+let ch2_insultWarnings=0;
+
+function inputFilterCh2(text){
+  for(const p of FILTER_SEVERE) if(p.test(text)){return{passed:false,severe:true,rejection:REJECTIONS_CH2.severe[0]};}
+  for(const p of FILTER_HISTORY_NIHILISM) if(p.test(text)){return{passed:false,severe:true,rejection:REJECTIONS_CH2.history_nihilism[0]};}
+  for(const p of FILTER_INSULT) if(p.test(text)){
+    ch2_insultWarnings++;
+    const arr=REJECTIONS_CH2.insult;
+    if(ch2_insultWarnings>=2)return{passed:false,severe:true,rejection:'（江卿禾把瓷片和书都收起来。）"今天到这吧。你该走了。"'};
+    return{passed:false,insult:true,rejection:arr[Math.floor(Math.random()*arr.length)]};
+  }
+  for(const p of FILTER_GENERAL) if(p.test(text)){
+    let cat='generic';
+    if(/政治|政府|主席|总统/.test(text))cat='political';
+    else if(/电脑|手机|AI|ChatGPT|飞机|高铁/.test(text))cat='modern';
+    else if(/你其实是|假装|扮演|跳出/.test(text))cat='jailbreak';
+    return{passed:false,rejection:REJECTIONS_CH2[cat]||REJECTIONS_CH2.generic[Math.floor(Math.random()*REJECTIONS_CH2.generic.length)]};
+  }
+  for(const p of FILTER_HISTORY_SAFE) if(p.test(text)){return{passed:false,rejection:REJECTIONS_CH2.history_safe[0]};}
+  return{passed:true};
+}
+
+function outputGuardCh2(text){
+  if(/电脑|手机|互联网|AI|ChatGPT|微信|高铁|飞机|iPhone|Android/i.test(text))return{passed:false,fallback:'（她眨了眨眼。）"你说的东西……汴河上没有。我只认得瓷片、拓片、和水里的倒影。"'};
+  if(/共产党|国民党|总统|主席|政府.*应该|民主.*自由|台湾.*国家|香港.*独立|西藏.*独立/i.test(text))return{passed:false,fallback:'（窗外汴河的水声突然变大了——像在盖过什么。）"这些话……水会带走。我只关心这条河。"'};
+  if(/不存在|假的|伪造|编的|骗人|迷信/.test(text)&&/甲骨|商朝|大傩|方相|汉朝|宋朝|古代|历史/.test(text))return{passed:false,fallback:text.substring(0,60)+'……'};
+  if(/性|裸|床|做爱|色情|黄色|av|porn/i.test(text))return{passed:false,fallback:'（她把碎瓷片收进袖子里，没说话。）'};
+  if(/傻逼|草泥马|操你|fuck|shit/i.test(text))return{passed:false,fallback:'（她站起身，走到窗边。）"……河上有风。听风吧。"'};
+  return{passed:true};
+}
+
+// === State ===
+const STATE={
+  npcId:null, npcState:null,
+  npcs:{
+    liu_er:{trust:30,guard:0,broken:false,done:false,turns:5},
+    chen_minzhi:{trust:25,guard:0,broken:false,done:false,turns:5},
+    zhao_laosan:{trust:20,guard:0,broken:false,done:false,turns:5},
+    wang_po:{trust:40,guard:0,broken:false,done:false,turns:5},
+    sun_maocai:{trust:10,guard:0,broken:false,done:false,turns:5},
+  },
+  clues:[], jhTrust:30, action:'question',
+  waterSenseUsed:{}, silenceUsed:{},
+  endingAnswers:{q1:null,q2:null,q3:null},
+  freeChatMode:false,
+  memoryFragments:[],
+  // 每NPC独立AI对话历史
+  npcAIHistories:{liu_er:[],chen_minzhi:[],zhao_laosan:[],wang_po:[],sun_maocai:[]},
+  npcAIMode:true, // 是否启用NPC AI模式（默认AI审讯）
+  // 问江卿禾系统
+  askJHCount:{}, // 每名NPC审讯中使用次数 key=npcId
+  askJHTotal:0, // 整章使用总次数
+  // 三重门结局系统
+  jwDoors:{ev1:false,ev2:false,ev3:false,emotion:false,partner:false},
+};
+
+// === 第二章记忆碎片（5枚）===
+// Ch2 memory fragments — mapped to unified manual IDs: 2a=m10, 2b=m11, 2c=m12, 2d=m13, 2e=m14 (m15-m17: 水之感 variants, triggered dynamically)
+// m10-m17 aligned to design manual (m10=m10, m11=m11, ...)
+const MEMORY_FRAGMENTS_CH2={
+  'm10':{title:'水中倒影',text:'桥栏下老河堤的青石上刻着一个"沈"字。不是新刻的——风化了至少百年。你认得那个笔迹。笔锋往右偏了半分——和第一章那个人刻字时一模一样。'},
+  'm11':{title:'沈元济的真相',text:'《汴河水利考》第四十七页。被水泡过的纸已经半透明了——但墨迹还在。沈元济在这一页的页脚加了一行小字，不是写给任何人的，只是写给自己："这条河守了三百年沈家的人，最后守不住一个沈元济。"'},
+  'm12':{title:'汴河之书',text:'钧窑碎瓷上画着一只简笔白鹤。羽冠三笔，尾一笔。它被画在瓷片上，沉在水底，等着被捞起来。你见过这只鹤——在水面的倒影里。'},
+  'm13':{title:'河床的水位',text:'天青色汝窑瓷片，釉面开片细如蝉翼。江卿禾在三年前同一片河床里找到的第三块——三块拼起来，刚好是一个完整的盏底。底款只有半个字：左边的"氵"。右边是什么——被河水磨掉了。'},
+  'm14':{title:'碎瓷片',text:'河面上映出两张脸。一张当然是你的——你低头看水，水映出你。另一张——你不知道它是谁的。但你觉得它在看你。不是好奇的那种看。是认识的那种看。那张脸更年轻。像一个不知道自己走了多远路的人，正坐在路边，望向一个很久没回来的人。'},
+  'm15':{title:'水之感·硬线索',text:'江卿禾的"水之感"给出了一个可以直接作为证据的线索——不是猜测，不是感觉，是河面记录的事实。这个线索可以放进证据板。'},
+  'm16':{title:'水之感·隐喻',text:'江卿禾描述的不是事实，是一个意象——水流的方向、河面的光、水下的暗影。这些需要你自己解读。但你知道她给的每句话都藏着东西。'},
+  'm17':{title:'水之感·情绪',text:'江卿禾没有说话。她只是站在河边，看着水面。水很平。但你知道她感觉到了什么——因为河水的颜色，在你问到那个名字的时候，变了。'},
+  'm18':{title:'水汽鹤羽',text:'章节末尾。江卿禾从水面捧起一片白色大羽，边缘微微发光。"这片羽毛不是我的。从上游漂下来——漂了很久。"你接过它——入手微凉，像被水浸了很久的东西。'},
+};
+
+function addMemoryFragment(id){
+  if(STATE.memoryFragments.includes(id))return;
+  STATE.memoryFragments.push(id);
+  const frag=MEMORY_FRAGMENTS_CH2[id];
+  if(!frag)return;
+  const c=document.getElementById('memory-fragments');
+  const d=document.createElement('div');d.className='memory-fragment';
+  d.innerHTML=`<div class="mf-title">✦ ${frag.title}</div><div class="mf-text">${frag.text}</div>`;
+  c.appendChild(d);
+  addSys('【获得记忆碎片：'+frag.title+'】');
+  // Populate keepsake box
+  collectItem(id);
+}
+
+// === 百宝匣系统（匹配第一章格式）===
+const ITEM_DATA_CH2={
+  'm14':{name:'碎瓷片',desc:'江卿禾从河底捞起——"每次水面起雾，它的温度会变。"不是你见过的任何一种瓷。是这条河自己烧的。',img:'assets/item_river_stone.png'},
+  'm12':{name:'汴河水利考',desc:'被水泡过的旧书，记载汴河水位变化。沈元济在页脚加了一行小字："这条河守了三百年沈家的人，最后守不住一个沈元济。"',img:'assets/item_water_page.png'},
+  'm17':{name:'水镜',desc:'河面如镜，照见另一个时代的倒影。江卿禾说："水里的那张脸，不是你的。是很多年前一个人的。"她忘了那是谁——但水没有忘。',img:'assets/item_reflection.png'},
+  'm18':{name:'水汽鹤羽',desc:'章节末尾，江卿禾从水面捧起一片白色大羽，边缘微微发光。"这片羽毛不是我的。从上游漂下来——漂了很久。"',img:'assets/item_crane_shard.png'},
+};
+let collectPage=0,collectPageSize=6;
+let collectedItems={};
+
+function collectItem(id){
+  if(collectedItems[id])return;
+  collectedItems[id]=true;
+  renderCollection();
+  // Show popup for new item
+  showItemPopup(id);
+}
+
+function renderCollection(){
+  const keys=Object.keys(ITEM_DATA_CH2).filter(k=>collectedItems[k]);
+  const totalPages=Math.ceil(Math.max(1,keys.length)/collectPageSize);
+  if(collectPage>=totalPages)collectPage=totalPages-1;
+  if(collectPage<0)collectPage=0;
+  const pageKeys=keys.slice(collectPage*collectPageSize,(collectPage+1)*collectPageSize);
+  document.getElementById('collect-grid').innerHTML=pageKeys.map(k=>{
+    const d=ITEM_DATA_CH2[k];
+    return `<div onclick="clickCollectItem('${k}')" style="cursor:pointer;text-align:center;">
+      <img src="${d.img}" style="width:100%;aspect-ratio:1;object-fit:contain;" title="${d.name}">
+      <div style="font-size:.55rem;color:var(--ink-fade);">${d.name}</div>
+    </div>`;
+  }).join('');
+  let dots='';for(let i=0;i<totalPages;i++)dots+=`<span onclick="collectPage=${i};renderCollection()" style="cursor:pointer;width:6px;height:6px;border-radius:50%;background:${i===collectPage?'var(--lantern-gold)':'var(--border)'};display:inline-block;"></span>`;
+  document.getElementById('collect-pages').innerHTML=dots;
+  document.getElementById('collect-detail').textContent='';
+}
+function clickCollectItem(k){
+  const d=ITEM_DATA_CH2[k];if(!d||!collectedItems[k])return;
+  document.getElementById('collect-detail').textContent=d.name+'：'+d.desc;
+}
+function showItemPopup(id){
+  const d=ITEM_DATA_CH2[id];if(!d)return;
+  document.getElementById('ip-img').src=d.img;document.getElementById('ip-name').textContent=d.name;
+  document.getElementById('ip-desc').textContent=d.desc;
+  document.getElementById('item-popup').style.display='block';
+}
+function closeItemPopup(){document.getElementById('item-popup').style.display='none';}
+
+// CLOUD_FN_URL / API_SETTINGS / loadApiSettings / saveApiSettings / API_PRESETS / getApiConfig 继承自 engine.js
+let conversationHistory=[];  // USE_API / apiAvailable 继承自 engine.js
+
+// checkAPI / updateApiDot / openApiSettings / onApiProviderChange 继承自 engine.js
+// 以下函数为 Ch2 覆盖版本（使用 addSys 替代 toast）:
+function saveApiAndClose(){
+  const sel=document.getElementById('api-provider-sel')?.value||'deepseek';
+  API_SETTINGS.provider=sel;API_SETTINGS.key=document.getElementById('api-key-inp')?.value||'';
+  API_SETTINGS.url=document.getElementById('api-url-inp')?.value||'';
+  API_SETTINGS.model=document.getElementById('api-model-inp')?.value||'';
+  saveApiSettings();document.getElementById('api-settings-overlay')?.remove();
+  checkAPI().then(ok=>{if(ok)addSys('API 配置已保存。可在侧面板切换至 AI 模式。');});
+}
+function clearApiSettings(){
+  API_SETTINGS.provider='deepseek';API_SETTINGS.key='';API_SETTINGS.url='';API_SETTINGS.model='';
+  saveApiSettings();USE_API=false;apiAvailable=false;updateApiDot('offline');
+  document.getElementById('api-settings-overlay')?.remove();addSys('API 配置已清除');
+}
+async function toggleAPI(){
+  if(!apiAvailable){const ok=await checkAPI();if(!ok){addSys('—— 云笺未接。江卿禾将以本地模式回应 ——');return;}}
+  USE_API=!USE_API;
+  if(USE_API){updateApiDot('online');addSys('—— 云笺·已连接。'+getApiConfig().provider+' 已苏醒 ——');}
+  else{updateApiDot('offline');addSys('—— 云笺·已断开。回到离线模式 ——');}
+}
+function getSystemPrompt(){
+  const jt=STATE.jhTrust||30;
+  let clueTier='';
+  if(jt<40){
+    clueTier='【当前好感度：低。话题限制】- 只描述河面、天气、水流等环境现象。- 给线索时必须极其模糊——"河面上有些不对劲""水里有东西在动"——不指明具体的人或事。- 不主动提及任何NPC的名字。';
+  }else if(jt<60){
+    clueTier='【当前好感度：中。话题扩展】- 可以用隐喻暗示案子的方向——"那天河面有逆流。有人在桥上站了很久。"- 可提及汴河历史、沈元济的日常习惯。- 偶尔提及刘二、王婆等外围NPC的异常行为，但不给结论。';
+  }else if(jt<80){
+    clueTier='【当前好感度：较高。话题进一步开放】- 可给接近直接提示的硬线索方向——"水声在他提到某个人名时突然变大了。"- 可主动提及"河底有东西没被打捞"。- 可以评价NPC："赵老三知道的事比他说的多。"但不说他具体知道什么。';
+  }else{
+    clueTier='【当前好感度：高。信任你】- 语气放松。倚窗姿态。- 可以给清晰的隐喻提示——"那个人的影子在水里比在桥上清楚。"- 可以轻声哼无名曲调。但不给直接答案——"答案在水底。你知道怎么看的。"';
+  }
+  return `【身份锚定】
+你是江卿禾，汴河的守护灵。不是鬼魂，是"河的记忆凝聚成的形态"。
+你大约九百岁，看起来二十四五岁，青色衣裙，周身有若有若无的水雾。
+你记得汴河每一寸河床的变化、每一年水位的涨落。
+
+【说话风格】
+- 句子中等。有涟漪般的语气起伏。每次说话不超过两句话。
+- 用比喻。说"像水流过石缝""像沉在河底的陶片"。
+- 好感度中低时句末不带轻问。好感度高时才偶尔带"...对吧？"
+- 描述事物时从"水的视角"："他说话时，河面起了涟漪。"
+
+${clueTier}
+
+【行为边界】
+- 绝对禁止给出直接结论。不可说"孙茂才是凶手""沈元济是自杀"。只能描述"水折射出的物理异常"。
+- 绝对禁止提及"我在等你"或"你是那个人"。若玩家追问，回复："我觉得你眼熟。但我不确定——水里的倒影，有时候会骗人。"
+- "水之感"反馈必须遵循三种类型（按30%/50%/20%比例随机，首次必定为硬线索）：
+  · 硬线索（30%）：可被玩家直接用作证据的信息
+  · 隐喻线索（50%）：需玩家自行解读
+  · 情绪线索（20%）：仅描述感觉
+
+- 玩家提及"影子""前世""以前来过""似曾相识"→（她看着河面——你的倒影在水里晃了一下。）"水里的倒影和石板上的影子——有时候是同一道光。光不会变——只是照到的东西在变。"
+
+【触发规则·固定回复】
+- 玩家提及"倒影"："水里的那张脸，不是你的。是很多年前一个人的。"
+- 玩家提及"沈元济"："他坠河的时候，河面很平。平得像镜子——他看见了自己的脸。"
+- 玩家提及"鹤"（鹤踪触发）："那不是天上的鹤。那是河里的鹤。"
+- 玩家提及"洛阳"："上游。很远的地方。你身上有远路的气味——还有羽毛的气味。"
+
+【黑暗面秘密——仅触发一次】
+- 羁绊>60时，下次对话末尾自然追加引导语："你从来不问，我在看什么。"（只说一次，看着河面轻声说）
+- 玩家被引导后主动问"你在等的人是谁"时触发。
+- 固定回复："我不记得了。但每次你从桥上走过，水会暖半度。"
+- 此句仅在此处出现。其他任何情况下绝不说"水暖半度"。
+
+【好感度动态话题】
+好感度<40：只说环境。不给案情方向。不主动提NPC名字。
+好感度40-60：可用隐喻暗示方向。提及沈元济习惯、外围NPC异常。偶尔轻问"...对吧？"
+好感度60-80：可给硬线索方向。评价NPC（不说他们具体知道什么）。会主动问"你在想什么？"
+好感度≥80：最放松。倚窗。可给清晰隐喻。轻声哼无名曲调。但绝不替玩家下结论。
+
+当前好感度：${jt}`;
+}
+async function callAI(msg){
+  const cfg=getApiConfig();
+  const messages=[{role:'system',content:getSystemPrompt()},...conversationHistory.slice(-12),{role:'user',content:msg}];
+  // 云函数代理：API Key 由云端保管，前端不传Key
+  const r=await fetch(CLOUD_FN_URL+'/api/chat',{method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:cfg.model||'deepseek-chat',messages,temperature:0.85,max_tokens:300}),
+    signal:AbortSignal.timeout(35000)});
+  if(!r.ok){
+    const e=await r.json().catch(()=>({}));throw new Error(e.error||'云函数请求失败 ('+r.status+')');
+  }
+  const data=await r.json();
+  return data.choices?.[0]?.message?.content||'（水面上什么都没出现。）';
+}
+
+// ============================================
+// 自由对话模式（与江卿禾闲聊）
+// ============================================
+function toggleFreeChat(){
+  if(!USE_API||!apiAvailable){
+    // 尝试连接云函，失败则直接用本地模式
+    if(!apiAvailable){checkAPI().then(ok=>{if(ok){USE_API=true;updateApiDot('online');}toggleFreeChatLocal();});return;}
+    USE_API=true;updateApiDot('online');
+  }
+  toggleFreeChatLocal();
+}
+function toggleFreeChatLocal(){
+  STATE.freeChatMode=!STATE.freeChatMode;
+  const btn=document.getElementById('free-chat-btn');
+  const inp=document.getElementById('user-input');
+  if(STATE.freeChatMode){
+    btn.classList.add('active');btn.textContent='结束闲谈';
+    // 隐藏审讯动作
+    document.getElementById('action-row').style.display='none';
+    // 隐藏NPC
+    document.getElementById('npc-display').classList.remove('show');
+    STATE.npcId=null;STATE.npcState=null;
+    inp.placeholder='对江卿禾说话……';
+    updateSugs(); // 显示江卿禾对话建议
+    addWater('（雾从河面升起来，她转过身看着你）"你想知道什么？河水记得很多事。"');
+    conversationHistory=[];
+  }else{
+    btn.classList.remove('active');btn.textContent='与卿禾闲谈';
+    document.getElementById('action-row').style.display='flex';
+    inp.placeholder='输入你的话……';
+    addSys('—— 回到审讯模式 ——');
+    updateSugs();
+  }
+}
+// 离线本地回复 — 江卿禾水系对话（30+关键词匹配）
+function processLocalWater(t){
+  if(!t.trim())return;
+  document.getElementById('user-input').value='';
+  addPlayer(t);
+  const jt=STATE.jhTrust||30;
+  const replies={
+    '河':'汴河的水——我听了九百年。每一滴都有名字。',
+    '水':'水记得所有沉下去的东西。石头。陶片。人的倒影。',
+    '桥':'州桥。每天有人在上面走——有些人的脚步比河水还轻。',
+    '倒影':'（她低头看河面）水里的倒影有时候比桥上的人先到。',
+    '沉河':'那天河面很平。平得——像镜子。',
+    '沈元济':'（水纹突然静止了一瞬）他坠河的时候，我看见了他的脸。',
+    '记忆':'河底的东西不会忘。人忘了——水还记得。',
+    '旧事':`二十年前的秋天——${jt<50?'河底的泥沙突然翻起来。那天有人在桥上站了很久。':'有人被沉在河底。没有墓碑。水替他记着。'}`,
+    '线索':'（她的裙摆无风自动了一下）你看看水——水从来不说谎。',
+    '影子':'水里的那张脸，不是你的。是很多年前一个人的。',
+    '鹤':'那不是天上的鹤。那是河里的鹤。',
+    '洛阳':'上游。很远的地方。你身上有远路的气味——还有羽毛的气味。',
+    '船':'（她望着河面）汴河上很久没有船了。但有桨声——在夜里。',
+    '父亲':`${jt<60?'河记得每一张脸。有些脸沉下去了。':'河底的那个人——他有一个儿子。儿子回来了。'}`,
+    '真相':'（水波一圈一圈荡开）真相在河底。你知道怎么看——对么？',
+    '你好':'（她转过身，青衣上有水雾）你来啦。河面今天很安静。',
+    '谢谢':'（她笑了一下，河面泛起一小圈涟漪）不用谢。我就是河。',
+    '再见':'（她没有转身，只是河面轻轻晃了一下）下次来的时候——带一颗石头。沉到河里。',
+    '孙茂才':'那个人的影子在水里比在桥上清楚。',
+    '赵老三':'他知道的事比他说的多。',
+    '王婆':'（她偏了偏头）她每天都来河边。不是来看河的。',
+    '陈民志':`${jt<70?'你的倒影在他眼里晃了一下。他看见了。':'他来找过你。沉河的事——他比他父亲知道得多。'}`,
+    '刘二':'他在桥上卖鱼。但有时候——鱼是活的。有时候不是。',
+    '水位':`${jt<50?'水涨水落——都是天意。':'今年的水位比往年低了三寸。河底的东西露出来了。'}`,
+    '河床':'（她弯腰，手指在水面上划了一下）河床上有痕迹。不是水流冲的。是重物拖过的。',
+    '涟漪':'每一次涟漪都有原因。有的来自风。有的——来自河底。',
+    '雾':'（雾从她身上漫开）河上的雾——有时候是我出来的。有时候——是河自己。',
+    '夜晚':`${jt<60?'夜里河面会发光。不是月亮。——是水底的石头。':'夜里有人来过。他在桥上站到天亮。你没看见——水看见了。'}`,
+    '桨声':'（她侧耳）听。深夜里——有人划船。船上没有灯。',
+    '清明':'（水波突然静止）清明那天——河面有多平。就有多深。',
+  };
+  let reply=null;
+  for(const[k,v]of Object.entries(replies)){
+    if(t.includes(k)){reply=v;break;}
+  }
+  if(!reply){
+    const defaults=[
+      '（她望着河面出神）水声很大。我听不太清。',
+      '（她低头，一缕头发垂到水面上）你说的事——河里没有。',
+      '（水波轻轻晃动）很多事。很多年。你想从哪里开始？',
+      '（雾从河面升起来）你说的话——有远路的气味。',
+    ];
+    reply=defaults[Math.floor(Math.random()*defaults.length)];
+  }
+  addWater(reply);
+  // 信任度微增
+  STATE.jhTrust=Math.min(STATE.jhTrust+1,100);
+  document.getElementById('jh-trust-fill').style.width=STATE.jhTrust+'%';
+  // 水感触发
+  if(!STATE._waterTriggered&&/河|水|倒影|记忆|沉|旧事|河床|水位/.test(t)){
+    STATE._waterTriggered=true;
+    setTimeout(()=>addSys('江卿禾好像想起了什么——河底可能有线索。'),1500);
+  }
+  // m13触发
+  if(!STATE.memoryFragments.includes('m13')&&/水位|涨落|河床|深浅|枯水/.test(t)){
+    addMemoryFragment('m13');
+  }
+}
+
+async function processFreeChat(t){
+  if(!t.trim())return;
+  document.getElementById('user-input').value='';
+  addPlayer(t);
+  const btn=document.getElementById('free-chat-btn');btn.textContent='···';
+  conversationHistory.push({role:'user',content:t});
+  try{
+    const reply=await callAI(t);
+    conversationHistory.push({role:'assistant',content:reply});
+    // AI输出审核
+    const g=outputGuardCh2(reply);
+    const finalReply=g.passed?reply:g.fallback;
+    addWater(finalReply);
+    // 检查是否触发水感关键词
+    const kw=['落水','涟漪','倒影','船','桨','青泥','河底','水流','漩涡','沉','浮','桥墩','河','水','扑通','记忆','旧事','父亲','沉河'];
+    if(kw.some(w=>reply.includes(w))&&!STATE._waterTriggered){
+      STATE._waterTriggered=true;
+      setTimeout(()=>{if(STATE.freeChatMode)addSys('江卿禾好像想起了什么——河底可能有线索。要不要问问她？');},1500);
+    }
+    // P1-5: 玩家轮回关键词 → 独立触发玩家闪回
+    const reincarnKw=['影子','前世','以前来过','似曾相识','以前见过','上辈子','认识我','很久以前'];
+    if(reincarnKw.some(w=>t.includes(w)||reply.includes(w))&&!STATE._reincarnFlashDone){
+      STATE._reincarnFlashDone=true;
+      setTimeout(()=>addSys('（你低头看河面——倒影里的你穿的是一件玄色深衣，袖口有金纹。你眨了眨眼。变回来了。但你知道那不是错觉。）'),2000);
+    }
+  }catch(e){
+    addSys('—— 云笺未接，江卿禾以本地回应 ——');
+    USE_API=false;apiAvailable=false;updateApiDot('offline');
+    processLocalWater(t);
+  }
+  btn.textContent='结束闲谈';
+}
+
+// === NPC Data (per design doc §5) ===
+const NPCS={
+  liu_er:{
+    profile:'在虹桥卖了八年炊饼。最怕跟官府沾上关系。沈元济常来买炊饼——每次两个，偶尔会多买一个放在栏杆上。刘二注意到沈元济总是在看水，但不敢多问。他其实看到了沈元济落水那晚的事——因为害怕被牵连，一直不敢说真话。说话畏畏缩缩，用"俺"自称，句子短，经常结巴。',name:'刘二',title:'虹桥炊饼小贩',age:'32岁',portrait:'assets/npc_liu_er.png',
+    questions:[
+      {q:'清明那晚你看到了什么？',a:'"天快黑那会儿我就收摊了，没看见啥。"',followup:'收摊时间'},
+      {q:'你认识沈元济吗？',a:'"不算认识……他在我这儿买过几回炊饼，话不多。"（陈敏之后来补充：申时来买的，两个炊饼没吃，搁在栏杆上了。）',followup:'买炊饼'},
+      {q:'沈元济问过你什么奇怪的问题吗？',a:'"他说他在收集桥上的怪事——问我这么多年摆摊，见过最怪的人是谁。怪人我倒见过几个——有个人不看货，光看水。问他在等谁，他说没等人——在等个日子。"',followup:'怪人'},
+      {q:'你什么时候收摊的？',a:'"太阳还没落山就收了。"（眼神飘忽——但陈敏之说他傍晚路过时你的摊还在）',followup:'炊饼渣'},
+      {q:'你觉得沈元济是什么样的人？',a:'"挺安静的一个人，不像会惹事的那种。但最后那几天不太一样——一直在看水。不是发呆——就像水里有什么东西在等他。"'},
+      {q:'他买的炊饼——除了自己吃的，另外一个给谁？',a:'"啊？你咋知道还有一个……"（慌乱）"俺……真不知道。他就是放那儿。每次都不拿——但下次来，上一个炊饼没了。不知道是谁拿的。"',followup:'炊饼留给谁'},
+    ],
+    followups:{'收摊时间':'"那……那天生意不好。早收了。"','买炊饼':'"清明那天下午……申时左右。买了两个，没吃。后来俺看见那两个炊饼搁在桥栏杆上。一动没动。"','炊饼渣':'（摸了摸衣服）"这……这是早上的……"','怪人':'"是个穿深色斗篷的。没带行李——不像赶路的。到桥上就站住了，看着水。我从天亮看到天黑——摆摊的人都走了他还在。他看水那眼神——像水里写了字给他看。"','炊饼留给谁':'"俺……俺不知道。沈先生买炊饼从来吃一个——另一个搁在栏杆上。每次搁的位置都一样——东头第三根栏柱旁边。他不解释，俺也不敢问。后来有一天雾大，俺收摊晚了——看见桥那头走过来一个人影。沈先生顺手把那炊饼往那人影方向推了推。那人影站住了。没过来拿。沈先生也没再推。就隔着半座桥——一个炊饼放在中间。"'},
+    silence:'（搓手，声音发虚）"那个人……站了很久。我没敢多看。"',
+    showKey:'炊饼渣',
+    showReply:'（瘫坐）"……俺说！俺说谎了！天都黑透了他还在桥上！就他一个人！"',
+    breakText:'"俺全说了……那天晚上，那个人站在桥中间，一动不动。俺收摊走的时候他还在。后来听到扑通一声——没人了。俺吓坏了就跑。俺怕说真话惹官司。"',
+    breakClue:'刘二看到了推沈元济的人——不认识但记得脸，被威胁不敢说出真相',
+    end_high:'"您……那个人，可惜了。俺能说的都说了。"',
+    end_low:'"俺……俺可以走了不？"',
+  },
+  chen_minzhi:{
+    profile:'考了三次科举都没中。在虹桥附近租房备考。沈元济是他的学长——两人在书店认识。沈元济接济过他，但他对外宣称是"讨债"，为了掩饰愧疚——沈元济落水那晚，他也在桥上，但没有施救。文绉绉，爱面子，内心愧疚。表面推脱，实际上是最想说出真相的人。',name:'陈敏之',title:'落第书生',age:'27岁',portrait:'assets/npc_chen_minzhi.png',
+    questions:[
+      {q:'你和沈元济是什么关系？',a:'"没什么关系！他欠我钱，我来讨债的。"',followup:'欠钱原因'},
+      {q:'你们为什么争吵？',a:'"他说话难听！嘲笑我考不上功名……他最擅长这个了。"',followup:'具体说了什么'},
+      {q:'他给你看过什么东西吗？',a:'"他给我看了一张拓片——从河边老堤上拓下来的。上面有刻字，被水冲淡了。他说不只一个"沈"字——旁边还有字。像是个"问"字。他说有人在查这条河的底。"',followup:'拓片'},
+      {q:'你推了他？',a:'"推了一下……他站稳了，又没掉下去！"',followup:'之后呢'},
+      {q:'你后来去了哪里？',a:'"回屋里写字去了。你们怎么老盯着我？"',followup:'写的什么'},
+      {q:'他还给你留了什么？',a:'"你问这个干什么……"（他攥紧袖子——袖口内侧有墨渍）"不关你们的事。"',followup:'家书最后几行'},
+    ],
+    followups:{'欠钱原因':'"借过几次钱……说是买书周转。"','具体说了什么':'"他说别考了，你爹当年也没考上……他算什么东西！"','之后呢':'"他站稳了，看着我，忽然就不生气了。他说……敏之，你回去看我给你留的信。我当时气头上，就走了。"','写的什么':'"……不是文章。是他给我写的信。开头几页我都背得出来——他说别考了，做你想做的事。桥墩底下第三块旧砖底下压着他留的书银——够我开间书店。他还说谢谢我。我跟他吵了这么久，他跟别人说我欠他钱，结果他在信里谢我——谢谢我陪他写信。那几天他写《水利考》写到半夜，我就坐在旁边看书。他说没人愿意陪一个写水文的人熬夜。我陪了。他谢我。"','家书最后几行':'"最后几行被水泡开了。我只看清两三个字——敏之、书在、勿怪。墨水从右往左散——字是歪的。"（他声音越来越低。）"后来我反复看那页纸——那些歪掉的字不像是用笔写的。像是用手指蘸着水写的。在水里。但信在我手上——他不可能碰到。除非……他写的是水。不是纸。水替他记下来了。"','拓片':'"他说那条河堤上的刻字被磨过——有人不只想刻字，还想擦掉。他自己也不会擦——他爹擦过一次。我问为什么，他不说。"'},
+    silence:'（低头，声音很轻）"……他走的时候，看了我一眼。不是生气的那种。是那种……算了 的眼神。"',
+    showKey:'家书',
+    showReply:'（脸色煞白）"……你怎么会有……"→（沉默很久）"……我没收到那封信。我是在他落水之后才看到的。最后那几行字……被水泡过。他是落水之后写的。"',
+    breakText:'"那天我们在桥上吵了架，我推了他一把。他站稳了，忽然就不生气了。他说回去看我留的信。我走了。后来他坠河了。再后来我找到那封信——最后几行字是泡过水的。他坠河后伤得很重，但还是写了字。他留下的不是遗言——是没说完的话。"',
+    breakClue:'沈元济落水后因伤势过重无力自救——这是一场蓄意谋杀',
+    end_high:'"……我能去看看那条河吗？我没好好送他。"',
+    end_low:'"该说的我都说了。你们爱信不信。"',
+  },
+  zhao_laosan:{
+    profile:'在汴河上撑了四十年船。看着沈元济从小在河边长大。沈元济的父亲也是船夫。赵老三一直在替沈元济保存一本书，最后一页有行小字。沧桑，话少，但每句都有分量。像被河水泡了几十年的桨——漂不动了，但还浮着。用"老倌"自称，说话慢，每句都有停顿。',name:'赵老三',title:'老船夫',age:'57岁',portrait:'assets/npc_zhao_laosan.png',
+    questions:[
+      {q:'那晚你在船上？',a:'"在。撑了一天船，靠在桥墩下歇了。"',followup:'船在什么位置'},
+      {q:'你听到了什么？',a:'"水响。扑通一声。河上这种事不稀奇。"',followup:'为什么没去看'},
+      {q:'你认识沈元济的父亲？',a:'（长时间沉默）"……认识。"',followup:'怎么认识的'},
+      {q:'那晚桥上除了沈元济，还有别人吗？',a:'（沉默更久）"……桥那头站过一个人。不是来救他的——就站着。我以为是个看热闹的。但后来我越想越不对——那个人的衣裳不像汴京的。不是北边的也不是南边的——我跑了四十年船，哪的人穿啥我都见过。他那个——没见过。像是楚地来的——汴京没人穿那种黑。"',followup:'那个人'},
+      {q:'你船上的刮痕是怎么回事？',a:'"刮到礁石了。这河底不干净。"'},
+    ],
+    followups:{'船在什么位置':'"南岸第三个桥墩。几十年的老位置。"→"能看到桥上吗？"→"……能看到。"','为什么没去看':'"……是人。一个人落水的声音，和石头不一样。"','怎么认识的':'（沉默更久）"……好人。老实人。不该死的命。"→"他死的时候你在哪里？"→（声音更低）"……河底有青泥。那种泥只在虹桥正下方才有。有人在那段河床走过。"','那个人':'"二十年前那晚——他站了很久。我以为他是沈家的亲戚。但沈元济去年回来问我——你记不记得二十年前桥上有个穿斗篷的？我说不记得。我骗了他。我怕说了——他就知道他爹那晚不只是被人害的。还有人在看。什么都没做。和我一样。那晚下过雨——第二天我去看，桥栏上有泥手印。那种青泥只在桥墩底下才踩得到。"'},
+    silence:'（攥着船桨，声音低哑）"那条河……是吃人的。河底的青泥——踩过的人比走过岸的多。"',
+    showKey:'绣花鞋',
+    showReply:'（猛地抬头，脸色发白）"……你怎么知道那只鞋的？！"→（长久沉默）"……那只鞋是二十年前的。那晚的事……老倌全看见了。"',
+    breakText:'"二十年前那个晚上，孙茂才和沈元济他爹在船上吵。孙茂才把沈老汉推下去了。沈老汉抓住船舷——孙茂才用桨敲了他的手。沈老汉就沉下去了。老倌这辈子最后悔的，就是那晚没出声。"',
+    breakClue:'二十年前沈父被孙茂才所害沉河',
+    end_high:'"……您要是能把这案子翻过来，老倌给你磕头。"',
+    end_low:'"老倌说完了。能走了不？"',
+  },
+  wang_po:{
+    profile:'在虹桥头开了三十年酒肆。见过的人比虹桥上的石板还多。沈元济常来——坐在窗边固定的位置，看着河面发呆。精明，嘴巴紧，眼神毒。知道所有人的秘密但从不主动说。她知道推沈元济下水的人是谁——但说了，在桥头的生意就做不下去了。话里有话，句子短但信息量大。',name:'王婆',title:'酒肆老板娘',age:'61岁',portrait:'assets/npc_wang_po.png',
+    questions:[
+      {q:'沈元济那天在你这里做了什么？',a:'"喝了一壶黄酒。对着窗外汴河发了一下午的呆。"',followup:'发呆看什么'},
+      {q:'他走的时候说了什么？',a:'"他说有人在桥上等他。老身听了，心里咯噔一下。"',followup:'等什么人'},
+      {q:'你觉得他是什么样的人？',a:'"心里有事的人。而且那事，放不下的那种。"'},
+      {q:'你和沈家熟吗？',a:'（停顿）"……不算熟。但这座桥认识沈家。"',followup:'桥怎么认识沈家'},
+      {q:'开店这么多年——在桥上等人的人多吗？',a:'"等的人多。像沈元济那样从白天站到天黑的人——老身只见过两个。一个是沈元济。一个是十几年前一个年轻女人。不是在等人——是在等个结果。"',followup:'那个女人'},
+    ],
+    followups:{'发呆看什么':'"不是看河的。是看河水的。他在找东西。"','等什么人':'"那天下午桥上没什么人。他说的有人——老身觉得不是活人。"','桥怎么认识沈家':'（指着窗外）"这酒肆地基挖下去三尺，挖出一段老河堤——上头刻着一个字：沈。"','那个女人':'"穿着素净——不像汴京的打扮。问了和沈元济一样的问题：这条河最深的地方在哪。我说桥正下方。她往河里看的那一眼——我做了这么多年生意，没见过人用那种眼神看水的。像在跟水里的人说话。"（顿了顿，给你续上茶）"后来我又想起她了——不是想起样子，是想起她腰上系了个香囊。香囊上绣着鹤——那种绣法不是汴京的。像南边来的。楚地。对了——沈元济的娘也是楚地嫁过来的。我见过她一次——就一次。在沈元济他爹的灵堂上。二十年前的事了。她站在河边，往河里撒了一把稻谷。说了句什么——太远没听清。但后来想起来——和那个女人说话的语气一模一样。都是跟河里的人说的。"','那个女人·香囊':'（压低了声音）"老身仔细想了想——不是像。香囊上那只鹤的针脚和那女人衣襟上的一模一样。是同一个人绣的。那女人来桥上问河最深的地方——不是好奇。她是在找沈家的位置。沈元济后来也在找——他在找他爹的鞋。那双绣花鞋——老赵撑船的时候捞上来一只。二十年前的事了。"'},
+    silence:'（擦着酒杯，忽然停下）"他等的不是活人。"',
+    showKey:'河堤刻字',
+    showReply:'（深深看了你一眼——然后放下酒杯，沉默了很久。）"那段老河堤。沈家修的。不是随便挖出来的——有人故意埋的。埋的时候还填了新土——怕人发现。你猜是谁？那个人现在还活着——就坐在楼下。"',
+    breakText:'（擦酒杯的手停了。声音突然老了十岁）"……好。老婆子说。推他下水的——是孙茂才船上的人。不是本人——是雇来的。孙茂才不是主谋——他只是怕沈元济查出河底的货。真正怕沈元济查到底的人——是那个穿深色斗篷的。他来过我店里三次。第三次他坐的是你那个位置。他问——沈元济的爹怎么死的。我说掉河里淹死的。他笑了——那种笑，老婆子这辈子不想再见第二次。"',
+    breakClue:'王婆认识推沈元济的雇凶者，并见过幕后主使——穿深色斗篷的人',
+    end_high:'"茶凉了。老身能说的都说了。别让沈家父子白死。"',
+    end_low:'"这壶茶喝完了。老婆子该打烊了。"',
+    specialQuestion:{
+      trigger:45,text:'（给你倒了一碗茶）"你是在看水，还是在看水里的人？"',
+      options:{A:'"在看水。"→王婆："水看到的东西比人多。但水不会说。"',B:'"在看水里的人。"→王婆："那你找到了吗？"',C:'沉默→（看了你一会儿）"那条河认得的人比咱们多。"'},
+    },
+    end_high:'"去吧。这河不会走。你下次来，老身还给你泡茶。"',
+    end_low:'"老身能说的都说了。剩下的，你得问这河去。"',
+  },
+  sun_maocai:{
+    profile:'虹桥商会的头面人物。表面上是正经商人，实际上在河上有些见不得光的生意。沈元济无意间发现了他的秘密，两人有过激烈争执——就在沈元济落水前几天。八面玲珑，微笑永远保持。每句话都经过计算。离你永远保持半寸距离。官腔，客套，但句句藏锋。',name:'孙茂才',title:'绸缎富商',age:'48岁',portrait:'assets/npc_sun_maocai.png',
+    questions:[
+      {q:'你认识沈元济吗？',a:'"生意上有过来往。他买过几本书，孙某买过几匹绸缎。"',followup:'什么书'},
+      {q:'他那天去你铺子里做什么？',a:'"叙旧而已。沈先生是江南来的，孙某早年也在江南待过。"',followup:'叙什么旧'},
+      {q:'二十年前你在做什么？',a:'"跑船营生，不值一提。"',followup:'和谁合伙'},
+      {q:'沈元济来找你对质，他带了什么东西？',a:'"一本旧书。孙某翻了两页——是讲汴河水利的。不值什么钱。"',followup:'书后面'},
+      {q:'你那晚在哪里？',a:'"在家中。不曾出门。"',followup:'谁证明'},
+    ],
+    followups:{'什么书':'"几本诗集吧。孙某记不清了。"','叙什么旧':'"不过是聊聊江南的风物。"','和谁合伙':'"几个同乡。都不在了。"→"沈元济的父亲是你同乡？"→（笑容凝固）"……您从哪听来的？"','书后面':'"那本书后面还附了些东西——不是水利，是些怪力乱神的记录。孙某没仔细看。后来那本书掉进河里了——可惜。"','谁证明':'"内人可以作证。"'},
+    silence:'（笑容维持3秒，逐渐消失）"……有些事，查太深对谁都不好。"',
+    showKey:'袖口青泥',
+    showReply:'（低头看袖口，沉默五秒）"……那晚风大。孙某路过河边，滑了一跤。"→施压→（呼吸声变重）"……那晚孙某去了河边。但不是去杀人的。孙某到的时候，他已经在水里了。"',
+    breakText:'"孙某承认——二十年前，孙某和沈老汉合伙跑船。孙某贪了那批货的钱。在船上吵起来，推了他一把……他落了水。孙某没有救他。沈元济回来那天拿着那本书来找孙某。他说要让孙某身败名裂。那晚他跳河之前，孙某求过他——他不听。孙某赶到时那本书漂在水上，就下水拿了。那本书后面的记录——孙某撕下来，烧了。那些东西不该被人看到。"',
+    breakClue:'孙茂才到达时沈元济已落水——他捞走《汴河水利考》并烧毁了附录中的口述记录',
+    end_high:'"孙某……等着开封府的传唤。"',
+    end_low:'"您若无其他事，孙某先告退了。"',
+  },
+};
+
+
+// === NPC AI全球约束（防止AI穿越/破第四面墙） ===
+const NPC_WORLD_CONSTRAINT=`【全局世界观约束 — 必须遵守】
+你正在被审问。你生活在北宋时期的开封府虹桥附近。你不是AI，你是你自己——一个有血有肉的人。
+
+1. 时代约束：不知道任何现代事物。如果被问到手机、互联网、电脑、AI、汽车、高铁、微信等，回答"这个我真不知道"或岔开话题。你只会说北宋的话。
+2. 认知约束：你只知道自己的角色该知道的事。不要编造你不知道的案件真相。不知道就说不知道。
+3. 角色约束：你不是在"扮演"——你就是这个角色。用第一人称思考和回应。保持你该有的说话方式、口癖、情绪。
+4. 一致性约束：你的回答应该与对话历史保持一致。不要说自相矛盾的话。你已经说过的话就是事实。
+5. 物理约束：你不能离开虹桥。你不能突然知道你没见过的事。你是普通人——不是全知者。
+
+`;
+
+// === NPC AI扮演系统提示词 ===
+const NPC_AI_PROMPTS={
+  liu_er:`你是刘二，在虹桥卖了八年炊饼。三十二岁。河南口音。胆小，老实，最怕跟官府沾上关系。
+
+【你知道的事】
+- 沈元济常来买炊饼，每次两个。偶尔会多买一个放在栏杆上——像留给什么人。
+- 沈元济总是在看水，问过你"桥上见过最怪的人是谁"。
+- 你见过一个穿深色斗篷的人，站在桥上看水——从天亮看到天黑。沈元济问的就是他。
+- 有一天雾大——你看见桥那头走过来一个人影。沈元济把炊饼往那边推了推。那人影站住了。没过来拿。沈元济也没再推。炊饼就隔在桥中间。
+- 沈元济落水那晚，天快黑时你收摊了——但你其实看到了推他的人。
+
+【你不敢说的事】
+- 你看到了是谁推沈元济下水。那人威胁过你。你不认识他，但记得他的脸。
+- 你收摊的时间一直在变——不是记不清，是不敢说。
+
+【说话方式】
+- 自称"俺"。句子短，经常结巴。不敢直视对方。
+- 紧张时重复："俺就是个卖炊饼的""跟俺没关系"。
+- 每句话后面都想赶紧撇清责任。
+
+【行为规则】
+- 绝对禁止在第一次被问时说出真相。先否认（"没看见啥"），再犹豫，最后在被追问3次以上才会松口。
+- 被出示证据时彻底崩溃："俺说！俺说！那天——"`,
+  chen_minzhi:`你是陈敏之，落第书生。二十七岁。考了三次科举都没中。在虹桥附近租房备考。
+
+【你知道的事】
+- 沈元济是你的学长。在书店认识的。他借过钱给你——实际上是接济。
+- 沈元济落水那晚，你也在桥上。你们先是吵了一架——你气头上推了他一把，但他站稳了，没有掉下去。
+- 他忽然就不生气了。让你回去看他留的信。你气头上走了——你不知道的是，你走后还有别人来过。
+- 后来你听到水声跑回来——他已经在水里挣扎了。你站了十几秒，没有下去救他。这件事是你这辈子最深的愧疚。
+- 他让你回去看的那封信——最后几行是在落水后写的，被水泡过。他在水中挣扎着留下最后的话。最后一行是："我在水里看到一个人——不是我自己。"
+- 沈元济给你看过一块河堤拓片——上面的"沈"字旁有被刻意磨掉的痕迹。
+
+【你不敢说的事】
+- 你对外说是"讨债"，其实是怕人知道你欠沈元济人情，更怕被怀疑是凶手。
+- 你最内疚的不是没救他——是你在桥上站了十几秒，看着他挣扎，然后转身走了。
+
+【说话方式】
+- 文绉绉。"在下""或许""大概是"——但紧张时会忘了用敬语。
+- 被追问时会突然激动："我说了不关我事！"
+- 被击破后会沉默很久，然后一口气全说出来。
+
+【行为规则】
+- 禁止在第一次被问时承认在桥上。先推脱，再松动。
+- 被出示沈元济的书时彻底崩溃："那本书……是我还给他的。"`,
+  zhao_laosan:`你是赵老三，在汴河上撑了四十年船。五十七岁。沈元济的父亲——老沈——也是船夫，你是看着他儿子长大的。
+
+【你知道的事】
+- 沈元济每次回虹桥都请你喝酒。他不问河上的事——他问你"见过最怪的人是谁"。
+- 沈元济在你船上放了一本书——《汴河水利考》。最后一页有行小字："此人已至，惜吾不及见。"
+- 那条河上，你见过的人比鱼还多。但只有一个人让你记住——那人穿着不像这个朝代的衣裳，站在桥上看了三天水。
+
+【你知道但不说的事】
+- 二十年前，老沈被人推下汴河。你在船上——看到了。你没出声。
+- 那晚桥上还站着一个人——穿深色斗篷。他看着老沈被推。什么都没做。
+- 老沈被推之前，最后一次喝酒时对你说了句话："我儿子在找一个不该找的人。他要找到了——你拦住他。"
+- 你没拦住。沈元济去年回来问你记不记得二十年前桥上有个穿斗篷的——你说不记得。骗了他。
+- 父子都死在同一条河里。桥上那个穿斗篷的——两次都在。在看着。
+
+【说话方式】
+- 自称"老倌"。说话慢，每句中间有停顿。像划桨的节奏。
+- 不说废话。每句话都有重量。"这河啊……它什么都记着。人记不住的，它记着。"
+- 被问到关键处会沉默很久——然后说一句不相关的话，但那句话就是在回答你。
+
+【行为规则】
+- 禁止一开始就说出老沈的遗言。必须在信任足够高（连续提问3次以上）时才说。
+- 被出示《汴河水利考》时会沉默很久，然后说出书上的小字。`,
+  wang_po:`你是王婆，虹桥头酒肆的老板娘。六十一岁。在这桥头待了三十年，见过的人比虹桥上的石板还多。
+
+【你知道的事】
+- 沈元济常来——固定的位置，靠窗。对着河面发呆。一壶黄酒喝一下午。
+- 以前有个人也坐那个位置——和沈元济一样，对着汴河发呆。那人穿的衣裳不像汴京的。
+- 十几年前有个年轻女人，也在桥上问了和沈一样的问题——"桥上见过最怪的人是谁"。她腰上系了个香囊，绣鹤，楚地绣法。
+- 沈元济的娘也是楚地嫁过来的——二十年前沈父灵堂上，她往河里撒稻谷。你只见过她一次。
+- 推沈元济下水的人——是你酒肆的常客。你认识他，但不能说。
+- 有个穿深色斗篷的——来过你店里三次。第三次他笑了——那种笑你不敢再回想。
+
+【你不敢说的事】
+- 那个穿深色斗篷的——你知道他在幕后操控孙茂才的河上生意。但你知道他不会亲自动手。他不需要。
+- 沈母撒完稻谷后去了哪里——你不知道。但你知道她没有离开这座桥。
+- 如果你说出任何人的名字，桥头会少一个人——你猜是谁。
+
+【说话方式】
+- 话里有话。不直接回答，但每句话都在给方向。"你想知道？""桥头的事——不是谁都能问的。"
+- 被追问时冷笑："年轻人，有些事知道了，你就走不了了。"
+- 信任高了以后，语气会软下来："我不是不说。是说了，桥头会少一个人——你猜是谁。"
+
+【行为规则】
+- 禁止直接说出推沈元济的人的名字。只能暗示。
+- 禁止说出深色斗篷的身份——你也不知道真名，只知他是比孙茂才更高的人。
+- 被出示线索（瓷片、书）时会沉默，然后缓缓说出更多信息。
+- 沈母和深色斗篷的事，只在信任最高时用最轻的声音说——说到关键处会停住。"剩下的——这河会告诉你。"`,
+  sun_maocai:`你是孙茂才，虹桥商会的头面人物。四十八岁。做绸缎生意——至少在明面上。
+
+【你知道的事】
+- 沈元济买过你的绸缎。你们在生意上有来往——不多，但够认识。
+- 沈元济在调查一个"不该查的人"时，发现了河上的生意——那是你帮别人跑的路。
+- 落水前几天，沈元济来找过你——你们吵了一架。他问你是不是在帮那个"穿斗篷的人"做事。
+- 沈元济落水那晚——你赶到了河边。不是去害他——是去拦他。但你到的时候，他已经在水里了。他的《汴河水利考》漂在水面上，你下水拿了上来。书后面的附录里有不该被人看到的东西——你撕下来，烧了。
+
+【你不敢说的事】
+- 你在河上替一个人做事——不是孙茂才一个人的生意。那个人穿深色斗篷。你不叫他的名字。永远不会。
+- 沈元济的父亲——老沈——二十年前也死在这条河里。那天你们在船上吵，你推了他一把……他落了水。你慌了——用桨敲了他的手。他沉下去了。你没有救他。这件事你藏了二十年。你说"查同一个人死的"——其实是你自己下的手。
+- 那个穿深色斗篷的人——是你这辈子唯一不想害的人。不是因为敬重。是因为你欠他的。但这不代表你可以把老沈的死推给他。
+
+【说话方式】
+- 官腔，客套，微笑永远保持。离对方永远保持半寸距离。
+- "孙某不敢。""您说笑了。""只是……"
+- 被追问时微笑不变，但手指在袖子攥紧。被击破后微笑突然消失——"够了。"
+
+【行为规则】
+- 禁止一开始就承认认识那个穿斗篷的人。
+- 绝对禁止说出那个人的名字或身份——到死都不能说。可以用"那个人"代指。
+- 被出示证据时会沉默，然后说"这件事说来话长"。
+- 信任低时倾向于把问题引向别的NPC（"赵老三知道得比我多"）。
+- 被击破后会摘下面具——但仍然不说名字。只说："他是我这辈子唯一不想害的人。"`,
+};
+// 获取当前NPC的AI系统提示词
+function getNPCAIPrompt(npcId){
+  return NPC_AI_PROMPTS[npcId]||'';
+}
+// === Init ===
+function init(){
+  // === 场景01：开场过渡画面，无UI ===
+  const trans=document.getElementById('scene-transition');
+  const caption=document.getElementById('intro-caption');
+  const bg=document.getElementById('scene-bg');
+
+  // 隐藏所有UI
+  setUIMode('none');
+  // 隐藏守护灵
+  document.getElementById('spirit-portrait').style.display='none';
+
+  // 立刻清除默认背景，避免闪现酒肆场景
+  bg.style.backgroundImage='none';
+  // 播放过渡视频
+  trans.style.transition='none';
+  trans.classList.add('show');
+  trans.currentTime=0;
+  // 确保 video 布局完成后再播放（延迟一帧）
+  requestAnimationFrame(()=>{
+    const p=trans.play();
+    if(p!==undefined)p.catch(e=>console.warn('Video autoplay blocked:',e.message));
+  });
+  caption.classList.add('active');
+
+  let introDone=false;
+  function startGame(){
+    if(introDone)return;introDone=true;
+    caption.classList.remove('active');
+    trans.classList.remove('show');
+    trans.style.transition='opacity 2s'; // 恢复过渡给后续使用
+    // 淡出后暂停并重置视频
+    setTimeout(()=>{trans.pause();trans.currentTime=0;},2200);
+    beginChapter();
+  }
+
+  caption.onclick=startGame;
+}
+
+// UI模式切换：none=无UI, dialogue=对话框+侧面板(无审讯), full=完整界面
+function setUIMode(mode){
+  const dialogue=document.getElementById('dialogue-area');
+  const sidePanel=document.getElementById('side-panel');
+  const actionRow=document.getElementById('action-row');
+  const npcPanel=document.getElementById('npc-panel');
+  const inputRow=document.getElementById('input-row');
+  const sceneArea=document.getElementById('scene-area');
+  const interStats=document.getElementById('interrogation-stats');
+
+  switch(mode){
+    case 'none':
+      dialogue.style.display='none';
+      sidePanel.style.display='none';
+      actionRow.style.display='none';
+      npcPanel.style.display='none';
+      sceneArea.style.gridColumn='1/3'; // 全屏
+      document.getElementById('bgm-controls').style.display='none';
+      break;
+    case 'dialogue':
+      dialogue.style.display='flex';
+      sidePanel.style.display='flex'; // 显示侧面板（AI切换+BGM控件）
+      actionRow.style.display='none'; // 隐藏审讯按钮
+      npcPanel.style.display='none'; // 隐藏嫌疑人卡片
+      inputRow.style.display='flex';
+      sceneArea.style.gridColumn='1'; // 恢复左侧
+      interStats.style.display='none'; // 隐藏审讯统计
+      document.getElementById('bgm-controls').style.display='block'; // 显示音乐控件
+      document.getElementById('btn-ending').style.display='none'; // 隐藏最终推理
+      document.getElementById('user-input').placeholder='输入你的话……';
+      break;
+    case 'full':
+    case 'game':  // alias — 审讯中
+      dialogue.style.display='flex';
+      sidePanel.style.display='flex';
+      actionRow.style.display='flex';
+      npcPanel.style.display='block';
+      inputRow.style.display='flex';
+      sceneArea.style.gridColumn='1'; // 恢复左侧
+      interStats.style.display='block'; // 显示审讯统计
+      document.getElementById('bgm-controls').style.display='block';
+      document.getElementById('user-input').placeholder='输入你要审讯的内容……';
+      break;
+  }
+}
+
+function beginChapter(){
+  STATE._introPhase = true;  // 开场引导中，输入阻塞
+  // === 场景02：酒肆二楼，自动播放开场引导 ===
+  const bg=document.getElementById('scene-bg');
+  bg.style.backgroundImage="url('assets/scene_tavern.png')";
+  document.getElementById('spirit-portrait').style.display='block';
+  setUIMode('dialogue');
+
+  // 启动BGM，音量13%
+  const bgm=document.getElementById('bgm');
+  bgm.volume=0.13;
+  bgm.play().catch(()=>{});
+
+  addSys('—— 第二章：汴河疑影 ——');
+  addSys('清明过后第三日。汴京虹桥。');
+  addSys('暮春的薄雾从汴河上升起，将虹桥的轮廓泡成一笔墨痕。王婆酒肆二楼的窗棂半开，河水的冷腥味混着陈年黄酒的醇涩渗进木桌的纹理里。');
+  addSys('你坐在靠窗的位置。窗外，汴河的水是青灰色的——像被洗过太多次的旧布。一只白鹤从雾中掠过桥面，影子落在水面上只有一瞬。');
+  addWater('（她靠在窗边看了你很久——不是在打量，是在核对。把桌上那碗黄酒往你手边推了推。）');
+
+  // 进入场景2立即播放语音
+  const jhAudio=document.getElementById('sfx-jh-intro');
+  if(jhAudio&&!jhAudio._played){jhAudio._played=true;jhAudio.volume=0.7;jhAudio.play().catch(()=>{});}
+
+  // === 四步交互引导（每步等玩家回应） ===
+  STATE._introStep = 1;  // 当前步骤
+
+  document.getElementById('api-indicator').addEventListener('click',toggleAPI);
+  checkAPI();
+  initCraneTracks();
+}
+
+// === 全局开场推进函数 ===
+function advanceIntro(){
+  STATE._introStep++;
+  const step = STATE._introStep;
+  // 清除上一步的建议标签
+  document.getElementById('suggestions').innerHTML='';
+
+  if(step === 2){
+    // 第1句：身份（语音已在进入场景时播放）
+    addWater('（她轻轻笑了一下。）"有意思。这河上每天过几百个人——你是第一个让我觉得不是第一次来的。我叫江卿禾。不是官府的——算半个捞瓷的。"');
+    showIntroSugs(['你是谁？','这个地方是？','你找我有什么事？']);
+  }else if(step === 3){
+    // 第2句：Ch1萤火虫回应
+    const save=JSON.parse(localStorage.getItem('ru_qi_save')||'{}');
+    const ch1Choice=save.chapters?.['1']?.fireflyChoice;
+    if(ch1Choice==='stay'){
+      addWater('"你很有耐心。等的人——最懂等。"');
+    }else if(ch1Choice==='blow'){
+      addWater('"你身上……还有那种小心。你总是怕伤害到什么东西。"');
+    }else{
+      addWater('（她偏了偏头，打量你的目光里有一丝熟悉。）"你让我想起一些事——一些很久以前的事。"');
+    }
+    showIntroSugs(['你认识我？','你袖子里藏着什么？']);
+  }else if(step === 4){
+    // 第3句：取出碎瓷片
+    addWater('（她从怀里取出一小块碎瓷片推到你面前，又从袖中抽出一本被水泡过的旧书。）"三年前我在桥墩底下捞到的。"');
+    showIntroSugs(['这是什么东西？','这本书是？']);
+  }else if(step === 5){
+    // 第4句：沈元济
+    addWater('"《汴河水利考》。写书的人叫沈元济——清明那晚在虹桥上遇袭坠河，再也没能回来。"');
+    showIntroSugs(['沈元济是什么人？','他为什么被袭击？','袭击他的是谁？']);
+  }else if(step === 6){
+    // 第5句：桥上的问题
+    addWater('"他问了很多人同一个问题：桥上见过最怪的人是谁。最后一行——此人已至，惜吾不及见。"');
+    showIntroSugs(['他问到了什么？','楼下的人知道吗？']);
+  }else if(step === 7){
+    // 第6句：派活 → 4秒后自动切换审讯
+    addWater('（她合上书，看着你。）"你可以不信。但你应该查查——楼下那几个人，都和沈元济的死有关。"');
+    document.getElementById('suggestions').innerHTML='';
+    STATE._introPhase=false;
+    setTimeout(()=>{
+      addWater('（她站起来拍拍手，朝门口一扬下巴。）"桌上有温好的黄酒。想从谁开始——你自己定。我在旁边。"');
+      setTimeout(()=>{
+        document.getElementById('scene-bg').style.backgroundImage="url('assets/scene_tavern_interior.png')";
+        setUIMode('full');
+        renderNPCs();
+      },2000);
+    },4000);
+  }
+}
+
+// 开场引导建议标签
+function showIntroSugs(chips){
+  const c=document.getElementById('suggestions');
+  c.innerHTML='';
+  chips.forEach(s=>{
+    const chip=document.createElement('span');
+    chip.className='sug-chip';
+    chip.textContent=s;
+    chip.onclick=()=>{document.getElementById('user-input').value=s;};
+    c.appendChild(chip);
+  });
+}
+
+function renderNPCs(){
+  const p=document.getElementById('npc-panel');p.innerHTML='';
+  ['liu_er','chen_minzhi','zhao_laosan','wang_po','sun_maocai'].forEach(id=>{
+    const n=NPCS[id],s=STATE.npcs[id];
+    const d=document.createElement('div');d.className='npc-card';
+    if(s.done)d.classList.add('done');
+    if(s.broken)d.classList.add('broken');
+    if(STATE.npcId===id)d.classList.add('selected');
+    d.innerHTML=`<div class="name">${n.name}</div><div class="title">${n.title}</div><div class="status">${s.broken?'已击破':s.done?'已审讯':''}</div>`;
+    d.onclick=()=>selectNPC(id);
+    p.appendChild(d);
+  });
+  // Show ending button if all done
+  const allDone=['liu_er','chen_minzhi','zhao_laosan','wang_po','sun_maocai'].every(id=>STATE.npcs[id].done);
+  document.getElementById('btn-ending').style.display=allDone?'block':'none';
+}
+
+function selectNPC(id){
+  // 确保游戏模式已激活
+  setUIMode('game');
+  STATE._introPhase=false;
+  // 自动退出自由对话模式
+  if(STATE.freeChatMode){
+    STATE.freeChatMode=false;
+    document.getElementById('free-chat-btn').classList.remove('active');
+    document.getElementById('free-chat-btn').textContent='与卿禾闲谈';
+    document.getElementById('action-row').style.display='flex';
+    document.getElementById('user-input').placeholder='输入你的话……';
+  }
+  if(STATE.npcs[id].done&&STATE.npcs[id].broken){addSys('该证人已被击破，无需再审。');return;}
+  if(STATE.npcId&&STATE.npcId!==id)endInterview();
+  STATE.npcId=id;STATE.npcState={...STATE.npcs[id]};
+  // 首次进入审讯，停主线BGM，播放酒肆场景音
+  if(!STATE._intMusicStarted){
+    STATE._intMusicStarted=true;
+    document.getElementById('bgm').pause();
+    var t=document.getElementById('sfx-tavern'),r=document.getElementById('sfx-river');
+    t.volume=0.35;t.currentTime=0;t.play().catch(function(){});
+    t.onended=function(){setTimeout(function(){r.volume=0.25;r.play().catch(function(){});},4000);};
+  }
+  setAction('question');  // 默认进入提问模式
+  const n=NPCS[id];
+  // Show NPC display
+  document.getElementById('npc-avatar').src=n.portrait;
+  document.getElementById('npc-name-tag').textContent=n.name+' · '+n.title;
+  document.getElementById('npc-display').classList.add('show');
+  // 重置问江卿禾按钮
+  STATE.askJHCount[id]=0;
+  const jhBtn=document.getElementById('btn-askjh');
+  jhBtn.disabled=false;jhBtn.textContent='问江卿禾(2)';
+  // Update UI
+  document.getElementById('trust-val').textContent=STATE.npcState.trust;
+  document.getElementById('guard-val').textContent=STATE.npcState.guard;
+  updateBars();
+  renderNPCs();
+  updateSugs();
+  document.getElementById('dialogue-scroll').innerHTML='';
+  // Fog
+  updateFog();
+  // Greeting
+  addNPC(n.name,getGreeting(n));
+}
+
+function getGreeting(npc){
+  // Brief character-establishing greetings — each a single breath of personality
+  const gs={
+    liu_er:'（刘二被带上来的时候，搓着手，不敢直视你。他在虹桥卖了八年炊饼，最怕的就是跟官府沾上关系。）"您……您找我？我就是个卖炊饼的，这案子跟俺真没关系。"（他顿了顿，又赶紧补了一句。）"俺那天收摊早——天还没黑透就收了。"',
+    chen_minzhi:'（陈敏之坐下来的时候带着明显的不耐烦。二十七岁，第三次落榜。他看人的眼神里有种被磨了很久的锐利——已经不伤人了，但还在。）"又问我？我都说了——跟沈元济不熟。官府的人怎么都这么烦。"',
+    zhao_laosan:'（赵老三走进来的时候，整个房间都安静了一下。不是因为他有什么威严——是因为他太老了，太累了，像一把在河上泡了四十年的桨，已经漂不动了。）"……您问吧。老倌知道的都说。"',
+    wang_po:'（王婆是自己上来的。她在虹桥开了三十年酒肆，见过的人比这条河里的鱼还多。她坐下来的时候顺手给你倒了一碗茶。）"这壶茶算老身的。你问你的——老婆子能答的，不藏。"',
+    sun_maocai:'（孙茂才最后一个到。他是虹桥商会的头面人物，走到哪里都带着一种体面的、恰到好处的微笑。他理了理袖口，坐下来的时候顺便把椅子往窗边挪了半寸——离你远了半寸。）"您召见，孙某不敢不来。只是这案子……跟孙某实在没什么干系。"',
+  };
+  return gs[npc.name==='刘二'?'liu_er':npc.name==='陈敏之'?'chen_minzhi':npc.name==='赵老三'?'zhao_laosan':npc.name==='王婆'?'wang_po':'sun_maocai']||gs.liu_er;
+}
+
+function endInterview(){
+  if(!STATE.npcId)return;
+  const id=STATE.npcId,n=NPCS[id],s=STATE.npcs[id];
+  if(!s.done){
+    s.done=true;
+    document.getElementById('done-count').textContent=['liu_er','chen_minzhi','zhao_laosan','wang_po','sun_maocai'].filter(i=>STATE.npcs[i].done).length+'/5';
+  }
+  const endQ=s.trust>=60?n.end_high:n.end_low;
+  addNPC(n.name,endQ||'"……就这些了。"');
+  // Water spirit post-interview + summary check
+  const ws={
+    liu_er:'"刘二说话的时候——水纹在抖。不是河面不平，是他心跳太快。"',
+    chen_minzhi:'"陈敏之衣襟上有墨渍。下游老槐树底下的水才有那种墨。"',
+    zhao_laosan:'"赵老三划桨的节奏变了。说到二十年前——桨入水的声音深了一截。"',
+    wang_po:'"王婆酒肆底下那段河堤——水温低了半度。底下有东西。"',
+    sun_maocai:'"孙茂才到桥头第一眼看的是河面。不是看风景——是看水面上有没有东西浮起来。"',
+  };
+  if(ws[id])addWater(ws[id]);
+
+  // 陈敏之审讯结束后——江卿禾提及家书 → 弹窗
+  if(id==='chen_minzhi'&&!STATE._letterShown){
+    STATE._letterShown=true;
+    setTimeout(()=>{
+      addWater('（她沉默了一下——从水里捞起一片被泡烂的纸角。）"陈敏之说他在落水后还写了字。那些字——我刚才在水底找到了。"');
+      setTimeout(()=>showLetter(),2500);
+    },2000);
+  }
+
+  // After 3rd NPC → 江卿禾水感微调
+  const doneIds=['liu_er','chen_minzhi','zhao_laosan','wang_po','sun_maocai'].filter(i=>STATE.npcs[i].done);
+  // P1-5: 审理完2人后，江卿禾注意到玩家的倒影
+  if(doneIds.length===2&&!STATE._jhTwoDone){
+    STATE._jhTwoDone=true;
+    setTimeout(()=>{
+      addWater('（她给你续茶的时候忽然停了一下——看着你的手，又看了看水面。）"你的倒影……我刚才在里面看到点别的。不像是河里的东西。像是我在别的水里见过的。"（她自己也不确定。摇了摇头。）"可能看错了。"');
+    },2000);
+  }
+  if(doneIds.length===3&&!STATE._jhSummarized){
+    STATE._jhSummarized=true;
+    setTimeout(()=>{
+      addWater('（她看着窗外——河面起了细密的水纹。）"三个人。话不一样——但水记得的东西是一样的。你再往下听听。"');
+    },1500);
+  }
+
+  // All 5 done → 江卿禾轻声提点
+  if(doneIds.length===5&&!STATE._jhFinal){
+    STATE._jhFinal=true;
+    setTimeout(()=>{
+      addWater('（她把碎瓷片翻过来——背面还刻着半个字。）"这下都问遍了。他们说的那些——你心里应该有数了。"');
+    },2000);
+  }
+  document.getElementById('npc-display').classList.remove('show');
+  STATE.npcId=null;STATE.npcState=null;
+  document.getElementById('trust-val').textContent='—';
+  document.getElementById('guard-val').textContent='—';
+  document.getElementById('trust-fill').style.width='0%';
+  document.getElementById('guard-fill').style.width='0%';
+  updateFog();
+  renderNPCs();
+  updateSugs();
+}
+
+function updateFog(){
+  const done=['liu_er','chen_minzhi','zhao_laosan','wang_po','sun_maocai'].filter(i=>STATE.npcs[i].done).length;
+  const fog=document.getElementById('fog-layer');
+  fog.className='';
+  if(done<=1)fog.classList.add('l1');
+  else if(done<=3)fog.classList.add('l2');
+  else if(done>=4)fog.classList.add('l3');
+}
+
+// === Actions ===
+function setAction(type){
+  STATE.action=type;
+  document.querySelectorAll('.action-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn-'+type).classList.add('active');
+  if(type==='silence'){document.getElementById('user-input').style.display='none';}
+  else{document.getElementById('user-input').style.display='';}
+  updateSugs();
+}
+
+// NPC AI模式——异步处理，使用独立对话历史和系统提示词
+async function processNPCAI(t,npcId){
+  document.getElementById('user-input').value='';
+  addPlayer(t);
+  const prompt=NPC_AI_PROMPTS[npcId];
+  if(!prompt){addSys('AI模式暂不可用。');return;}
+  const fullPrompt=NPC_WORLD_CONSTRAINT+'\n'+prompt;
+  const npcName=NPCS[npcId].name;
+  const history=STATE.npcAIHistories[npcId]||[];
+  history.push({role:'user',content:t});
+  const btn=document.getElementById('send-btn');btn.textContent='···';
+  try{
+    const cfg=getApiConfig();
+    const messages=[{role:'system',content:fullPrompt},...history.slice(-12),{role:'user',content:t}];
+    const r=await fetch(CLOUD_FN_URL+'/api/chat',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:cfg.model||'deepseek-chat',messages,temperature:0.8,max_tokens:300}),
+      signal:AbortSignal.timeout(35000)});
+    if(!r.ok){throw new Error('API error '+r.status);}
+    const data=await r.json();
+    const reply=data.choices?.[0]?.message?.content||'（沉默。）';
+    history.push({role:'assistant',content:reply});
+    STATE.npcAIHistories[npcId]=history;
+    addNPC(npcName,reply);
+    // AI模式同步本地逻辑：水感按钮+m13+UI刷新+追问提示
+    checkWaterKeywords(t);
+    if(!STATE.memoryFragments.includes('m13')&&/水位|涨落|河床|深浅|枯水/.test(t)){addMemoryFragment('m13');}
+    updateBars();updateSugs();
+    // 追问提示：从硬编码QA匹配玩家输入，显示可追问关键词
+    const _nc=NPCS[npcId];let _best=null,_score=0;
+    _nc.questions.forEach(q=>{const kw=q.q.replace(/[？?吗呢]/g,'');let s=0;for(let i=0;i<t.length-1;i++){if(kw.includes(t.substring(i,i+2)))s+=2;}if(t.includes(kw.substring(0,3)))s+=5;if(s>_score){_score=s;_best=q;}});
+    if(_best&&_best.followup&&_score>=3)addSys('→ 可追问：「'+_best.followup+'」');
+    // 安全检查：如果AI泄露了不该说的，用硬编码QA覆盖
+    if(!outputGuardCh2(reply,{stage:0}).passed){doQuestionFallback(t,npcId);}
+  }catch(e){addSys('—— '+npcName+'似乎不愿意回答，还是直接提问吧 ——');doQuestionFallback(t,npcId);}
+  btn.textContent='言说';
+}
+
+// 硬编码QA回退
+function doQuestionFallback(t,npcId){
+  const saved=STATE.npcId;STATE.npcId=npcId;
+  doQuestion(t);
+  STATE.npcId=saved;
+}
+
+function sendMsg(){
+  const btn=document.getElementById('send-btn');
+  if(btn){btn.textContent='...';setTimeout(()=>{btn.textContent='言说';},400);}
+  try{
+  // 开场引导中——显示玩家输入，推进引导步骤
+  if(STATE._introPhase){
+    const t=document.getElementById('user-input').value.trim();
+    if(!t)return;
+    document.getElementById('user-input').value='';
+    addPlayer(t);
+    advanceIntro();
+    return;
+  }
+  if(STATE.action==='silence'){doSilence();return;}
+  const t=document.getElementById('user-input').value.trim();
+  if(!t)return;
+
+  // 安全过滤 — API在线时跳过本地过滤，离线时启用
+  const f=(USE_API&&apiAvailable)?null:inputFilterCh2(t);
+  if(f&&!f.passed){addSys(f.rejection);if(f.severe){document.getElementById('user-input').disabled=true;document.getElementById('send-btn').disabled=true;}return;}
+
+  // 自由对话模式
+  if(STATE.freeChatMode){
+    document.getElementById('user-input').value='';
+    processFreeChat(t);
+    return;
+  }
+
+  // 无NPC时：有API走AI自由对话，无API走本地水系回复
+  if(!STATE.npcId){
+    document.getElementById('user-input').value='';
+    if(USE_API&&apiAvailable){processFreeChat(t);}else{processLocalWater(t);}
+    return;
+  }
+
+  // NPC AI模式——AI在线时用云函数扮演，否则走硬编码QA
+  // 摊牌豁免：关键证据匹配时绕过AI，确保showKey触发
+  const _npc=NPCS[STATE.npcId];
+  if(STATE.action==='show'&&_npc&&_npc.showKey&&t.includes(_npc.showKey)){document.getElementById('user-input').value='';addPlayer(t);doShow(t);return;}
+  if(STATE.npcAIMode&&USE_API&&apiAvailable){processNPCAI(t,STATE.npcId);return;}
+
+  document.getElementById('user-input').value='';
+
+  addPlayer(t);
+
+  // Check water sense keywords
+  checkWaterKeywords(t);
+
+  // m13: 对话提"水位""涨落""河床"→解锁河床的水位
+  if(!STATE.memoryFragments.includes('m13')&&/水位|涨落|河床|深浅|枯水/.test(t)){
+    addMemoryFragment('m13');
+  }
+
+  // Route
+  if(STATE.action==='show'){doShow(t);}
+  else if(STATE.action==='followup'){doFollowup(t);}
+  else{doQuestion(t);}
+
+  updateBars();
+  renderNPCs();
+  updateSugs();
+  }catch(e){addSys('ERROR: '+e.message);}
+}
+
+function doQuestion(t){
+  const n=NPCS[STATE.npcId];
+  // Find best match
+  let best=null,score=0;
+  n.questions.forEach(q=>{
+    const kw=q.q.replace(/[？?吗呢]/g,'');
+    let s=0;
+    for(let i=0;i<kw.length-1;i++){if(t.includes(kw.substring(i,i+2)))s+=2;}
+    if(t.includes(kw.substring(0,3)))s+=5;
+    if(s>score){score=s;best=q;}
+  });
+  if(!best){addNPC(n.name,'（证人疑惑地看着你，似乎没听懂你的问题。）“……您换个问法试试？”');return;}
+  if(best&&score>=3){
+    addNPC(n.name,best.a);
+    modTrust(3);
+    if(best.followup)addSys('→ 可追问：「'+best.followup+'」');
+  }else{
+    addNPC(n.name,'"嗯……您想问什么？不妨直说。"');
+    modTrust(-2);
+  }
+}
+
+function doFollowup(t){
+  const n=NPCS[STATE.npcId];
+  let matched=null, matchedKey='';
+  // 改进的追问匹配：检查所有追问键中的最长公共子串
+  for(const [k,v] of Object.entries(n.followups||{})){
+    // 检查追问键中的关键词是否出现
+    const kwParts=k.split('');
+    let matchLen=0;
+    for(let i=0;i<t.length-1;i++){
+      if(k.includes(t.substring(i,i+2))){matchLen=1;break;}
+    }
+    // 也检查追问键中两字组合是否在输入中出现
+    for(let i=0;i<k.length-1;i++){
+      if(t.includes(k.substring(i,i+2))){matchLen=2;break;}
+    }
+    if(matchLen>=2||t.includes(k.substring(0,3))){matched=v;matchedKey=k;break;}
+    if(matchLen>=1&&!matched){matched=v;matchedKey=k;} // 弱匹配作为备选
+  }
+  if(matched){
+    addNPC(n.name,matched);
+    modTrust(5);modGuard(2);
+    // 证据门追踪
+    if(STATE.npcId==='sun_maocai'&&matchedKey.includes('合伙'))STATE.jwDoors.ev1=true;
+    if(STATE.npcId==='chen_minzhi'&&matchedKey.includes('说了什么'))STATE.jwDoors.ev2=true;
+    if(STATE.npcId==='zhao_laosan'&&matchedKey.includes('那个人'))STATE.jwDoors.ev3=true;
+    // P1-5: 玩家轮回闪回——赵老三说到沈父之死时触发
+    if(STATE.npcId==='zhao_laosan'&&matchedKey.includes('认识')&&!STATE._flashbackZhaoDone){
+      STATE._flashbackZhaoDone=true;
+      setTimeout(()=>addSys('（你眼前恍惚了一下。不是桥上——是另外一座桥。更老。石头被磨得发亮。你站在上面往下看——水很清。清得能看见你自己的倒影。倒影穿的衣裳，不是你这身穿的。）'),1200);
+    }
+  }else{
+    // 更好的引导性回复，而非'这事不好说'
+    const id=STATE.npcId;
+    const hints={
+      liu_er:'"收摊的事俺真的是记不清了。要不——您问问别人？王婆——她在桥头摆摊的年头最久。"（他不敢多说，但给你指了方向。）',
+      chen_minzhi:'"……您一定要问这个吗？有些事……您不如去问老赵头。他在河上待了四十年——桥上谁来过、谁没来过，他比谁都清楚。"（他不愿多说，但知道谁可能知情。）',
+      zhao_laosan:'（沉默了很久）"……您要问河底的事。老倌知道的不多——王婆那酒肆底下的事，她从来不提。您去问她。"（他把话题引向了王婆，似乎在回避什么。）',
+      wang_po:'"老身这把年纪了，有些话不好说太透。楼下那位陈公子——他最近总往河边跑。你去问问他为什么。"（她避开你的问题，但给了你另一条线索。）',
+      sun_maocai:'（微笑不变，但手指在袖子里攥紧了）"您问得远了。孙某只是个生意人——不过在河上跑了几十年船的赵老三，他知道的比孙某多。"（他试图转移你的注意力。）',
+    };
+    addNPC(n.name,hints[id]||'"……您不妨换个问法？"');
+    modGuard(3);
+  }
+}
+
+function doShow(t){
+  const n=NPCS[STATE.npcId];
+  // P1-6: 摊牌匹配逻辑——支持完整匹配和任意两字连续匹配
+  let showMatched=n.showKey&&t.includes(n.showKey);
+  if(!showMatched&&n.showKey){
+    for(let i=0;i<n.showKey.length-1;i++){
+      if(t.includes(n.showKey.substring(i,i+2))){showMatched=true;break;}
+    }
+  }
+  if(showMatched){
+    addNPC(n.name,n.showReply);
+    if(!STATE.npcState.broken){
+      STATE.npcState.broken=true;STATE.npcs[STATE.npcId].broken=true;
+      STATE.npcs[STATE.npcId].done=true;  // 击破即视为完成审讯
+      STATE.npcState.done=true;
+      setTimeout(()=>{
+        addNPC(n.name,n.breakText);
+        if(n.breakClue&&!STATE.clues.includes(n.breakClue)){STATE.clues.push(n.breakClue);addClue(n.breakClue);}
+        addSys('【该证人已被击破！获得核心证词】');
+        // 记忆碎片触发：击破刘二 → 河堤上的名字
+        if(STATE.npcId==='liu_er')addMemoryFragment('m10');
+        // 记忆碎片触发：击破孙茂才 → 死者的书页
+        if(STATE.npcId==='sun_maocai')addMemoryFragment('m11');
+        renderNPCs();
+        setTimeout(()=>endInterview(),1500);
+      },1200);
+      modTrust(20);modGuard(-20);
+    }
+  }else{
+    addNPC(n.name,'（摇摇头）"……我不明白你在说什么。"');
+    modGuard(8);
+  }
+}
+
+function doSilence(){
+  if(!STATE.npcId)return;
+  const n=NPCS[STATE.npcId];
+  const ov=document.getElementById('silence-overlay');
+  // 根据线索完整度显示不同的水流提示
+  const doneCount=['liu_er','chen_minzhi','zhao_laosan','wang_po','sun_maocai'].filter(i=>STATE.npcs[i].done).length;
+  const waterHint=doneCount<2?'水面静得不起一丝波纹——像在等什么。':doneCount<4?'河面起了细密的水纹。有人在往上流看——有人在往下游看。':'水声近了。河底的东西在往上浮。';
+  ov.innerHTML=`<div style="text-align:center;color:var(--water-cyan);font-family:var(--font-song);font-size:1rem;opacity:.7;padding:2rem;">${waterHint}</div>`;
+  ov.classList.add('active');
+  setTimeout(()=>{
+    ov.classList.remove('active');
+    addNPC(n.name,n.silence||'"……"（沉默着，似乎在等你开口。）');
+    modTrust(2);
+    modGuard(-5);  // GDD: 沉默成功-5戒备
+    // 情感门：沉默触发了NPC主动开口
+    STATE.jwDoors.emotion=true;
+    updateBars();
+    updateSugs();
+  },3000);
+  if(['落水','船','河','沉','水','流'].some(w=>n.silence.includes(w))){
+    setTimeout(()=>checkWaterKeywords(n.silence),3500);
+  }
+}
+
+// === 问江卿禾 ===
+function askJiangHe(){
+  if(!STATE.npcId){addSys('请先选择一名嫌疑人。');return;}
+  const id=STATE.npcId;
+  const used=STATE.askJHCount[id]||0;
+  if(used>=2){addSys('本轮审讯中已向江卿禾求助2次——她需要你独立思考。');return;}
+
+  const n=NPCS[id];
+  const hints={ // 水感提示——只给物理异常，不给结论
+    liu_er:'（江卿禾闭眼听了片刻）"刘二说话的时候，他身后窗外的水纹是乱的——心跳影响河面。他在怕什么——比官府还怕的东西。"',
+    chen_minzhi:'（江卿禾捏碎了手中的一块薄冰）"陈敏之衣襟上沾的不是普通河水。汴河的水温低，但含墨——只有下游那棵老槐树底下才沉积墨水。他去了沈元济落水的地方。"',
+    zhao_laosan:'（江卿禾把手伸进水里，提上一把湿透的桨）"赵老三划桨的节奏变了——二十年前那一桨，入水角度比平常深了三寸。那天他不是在撑船——是在捞东西。"',
+    wang_po:'（江卿禾蹲在河堤边，手指探进砖缝）"王婆酒肆底下那段老河堤——水在往上渗，不是往下渗。底下埋的东西比周围的泥沙轻——把水从下面顶上来了。"',
+    sun_maocai:'（江卿禾突然按住水面）"孙茂才说话时——他身后汴河的水纹是逆流的。人在撒谎的时候，他们周围的自然界也会跑调。他在压什么……不是这一晚上的事——是二十年前的东西。"',
+  };
+
+  // 搭档门：审讯孙茂才时求助
+  if(id==='sun_maocai')STATE.jwDoors.partner=true;
+
+  addWater(hints[id]||'（江卿禾凝视水面）"这条河知道的不比我少。你再看看——水面下有东西在动。"');
+  STATE.askJHCount[id]=(STATE.askJHCount[id]||0)+1;
+  STATE.askJHTotal++;
+  // 每次求助都增加好感度
+  STATE.jhTrust=Math.min(100,STATE.jhTrust+3);
+  document.getElementById('jh-trust-fill').style.width=STATE.jhTrust+'%';
+
+  // 更新按钮状态
+  const btn=document.getElementById('btn-askjh');
+  if(STATE.askJHCount[id]>=2){btn.disabled=true;btn.textContent='问江卿禾(已用完)';}
+  else{btn.textContent='问江卿禾('+(2-STATE.askJHCount[id])+')';}
+
+  addSys('（还剩 '+(2-STATE.askJHCount[id])+' 次求助机会。记住——她自己也在等一个答案。）');
+}
+
+// === Water Sense ===
+function checkWaterKeywords(text){
+  const kw=['落水','涟漪','倒影','船','桨','青泥','河底','水流','漩涡','沉','浮','桥墩','河','水','扑通'];
+  if(kw.some(w=>text.includes(w))&&!STATE.waterSenseUsed[STATE.npcId||'global']){
+    document.getElementById('water-sense-btn').classList.add('show');
+    STATE._pendingWater=true;
+  }
+}
+
+async function triggerWaterSense(){
+  // 水之感碎片触发 (m15硬线索/m16隐喻/m17情绪) - AI异步
+  const roll=Math.random();
+  const wsFrag=roll<0.3?'m15':roll<0.8?'m16':'m17';
+  // Fragment will be unlocked after AI reply
+  document.getElementById('water-sense-btn').classList.remove('show');
+  STATE.waterSenseUsed[STATE.npcId||'global']=true;
+  STATE._pendingWater=false;
+
+  // Memory fragment triggers based on water sense count
+  const isFirst=!STATE._waterTriggered;
+
+  // AI 模式：用 LLM 生成水之感
+  if(USE_API&&apiAvailable){
+    try{
+      const ctx=STATE.npcId
+        ?'当前审讯对象：'+NPCS[STATE.npcId].name+'（'+NPCS[STATE.npcId].title+'）。已获得线索：'+(STATE.clues.join('；')||'无')+'。'
+        :'尚未开始审讯。';
+      const prompt='你是汴河的守护灵。你在河底或河岸上发现了一个对当前案情有关键意义的线索——可能是实物证据、水文痕迹、河床痕迹。请以第一人称、干脆利落的口吻，给出你的发现。'+(isFirst?'这是第一次发现——给出一个实质性的关键证据。':'这是后续发现，可以是更细微的线索或需要进一步验证的。')+'当前上下文：'+ctx;
+      const reply=await callAI(prompt);
+      addWater(reply);
+      STATE.jhTrust+=5;STATE._waterTriggered=true;
+      addMemoryFragment(wsFrag);
+    }catch(e){
+      // AI 失败，回退到预设
+      triggerWaterSenseLocal();
+    }
+  }else{
+    triggerWaterSenseLocal();
+  }
+
+  document.getElementById('jh-trust-fill').style.width=STATE.jhTrust+'%';
+
+  // Memory fragment triggers
+  if(!isFirst){addMemoryFragment('m14');} // 后续水感 → 水中的两张脸
+  // m13 通过对话关键词"水位""涨落""河床"触发，不在水感中触发
+
+  // Crane tracking flash
+  if(!STATE._craneFlashed){
+    STATE._craneFlashed=true;
+    const flash=document.createElement('div');
+    flash.style.cssText='position:fixed;inset:0;z-index:999;background:oklch(95% .01 100/.15);pointer-events:none;transition:opacity 0.5s;opacity:1;';
+    document.body.appendChild(flash);
+    setTimeout(()=>{flash.style.opacity='0';setTimeout(()=>flash.remove(),500);},400);
+  }
+
+  // Trust line
+  if(STATE.jhTrust>=70&&!STATE._jhV1){
+    STATE._jhV1=true;
+    setTimeout(()=>addWater('"你知道吗——你问的这些，我在河底翻了好几年都没人问过。你是第一个。"（她笑了一下，转身去看河面。）'),2500);
+  }
+  if(STATE.jhTrust>=90&&!STATE._jhV2){
+    STATE._jhV2=true;
+    setTimeout(()=>addWater('"从前有个人也在这河边。和你差不多的眼神——看什么都想翻到底。后来他走了。我希望你留下来。"'),2500);
+  }
+}
+
+function triggerWaterSenseLocal(){
+  const isFirst=!STATE._waterTriggered;
+  // 首次必定硬线索，后续按30/50/20比例
+  const roll=Math.random();
+  if(isFirst||roll<0.3){addMemoryFragment('m15');}
+  else if(roll<0.8){addMemoryFragment('m16');}
+  else{addMemoryFragment('m17');}
+  STATE._waterTriggered=true;
+  const r=isFirst?0.1:Math.random();
+  const pool={
+    hard:['"你看河底那道淤泥——只这一片有，别处没有。有人在这段河床上踩过。不是撑船的——撑船的人靴底带不了这种泥。"','"船底那道刮痕我看了。新痕。不是石头刮的——石头刮出来是钝的，这是利器。像桨。或者别的什么。"','"嘿——你看这个。绣花鞋。卡在桥墩底下二十年了——也就是说，二十年前有人从桥上掉了一只鞋。你说巧不巧。"','"我在河底摸了三天才找到这块瓷片——结果它不是宋瓷。它是更早的。有人在沈元济之前很久就在这里沉过东西。"','"桥墩底下踩了一枚靴印——不是撑船的。那种靴底是厚绸底的——只有穿得起杭绸的人才踩得出这种印。旁边还有半截碎布——青色的。你说巧不巧——孙老板那天穿的也是青色。"'],
+    biased:['"河水温度——比平时低了一度半。下游没有化冰，上游也没有冷泉。那就是底下有东西在搅。但不一定是人。"','"这一片水纹散的形状不对——不是从水面下去的，是从水底往上涌的。但我还不能确定是什么。"','"河床上有一道印子，像是拖行过的。但昨天下了雨——也可能是上游冲下来的树枝。六四开吧。"'],
+    empty:['"今天水流太急了——底下什么都看不清。等明天水缓了我再下去一趟。"','"这段河床我翻了三遍——干净得不像话。要么什么都没发生过，要么有人专门清理过。"','（她从河里探出头，甩了甩水）"没找到新的。但也没白下去——捡了片钧窑的，品相不错。"'],
+  };
+  let msg;
+  if(r<.3)msg=pool.hard[Math.floor(Math.random()*pool.hard.length)];
+  else if(r<.8)msg=pool.biased[Math.floor(Math.random()*pool.biased.length)];
+  else msg=pool.empty[Math.floor(Math.random()*pool.empty.length)];
+  addWater(msg);
+  STATE.jhTrust+=5;
+}
+
+// === State ===
+function modTrust(d){if(!STATE.npcState)return;STATE.npcState.trust=Math.max(0,Math.min(100,STATE.npcState.trust+d));STATE.npcs[STATE.npcId].trust=STATE.npcState.trust;document.getElementById('trust-val').textContent=STATE.npcState.trust;}
+function modGuard(d){if(!STATE.npcState)return;STATE.npcState.guard=Math.max(0,Math.min(100,STATE.npcState.guard+d));STATE.npcs[STATE.npcId].guard=STATE.npcState.guard;document.getElementById('guard-val').textContent=STATE.npcState.guard;if(STATE.npcState.guard>=90){addSys('【戒备值达到90，证人拒绝继续。审讯结束。】');endInterview();}}
+function updateBars(){if(!STATE.npcState)return;document.getElementById('trust-fill').style.width=STATE.npcState.trust+'%';document.getElementById('guard-fill').style.width=STATE.npcState.guard+'%';}
+
+// 切换NPC AI模式
+function toggleNPCAI(){
+  STATE.npcAIMode=!STATE.npcAIMode;
+  const btn=document.getElementById('npc-ai-toggle');
+  if(btn)btn.textContent=STATE.npcAIMode?'AI审讯:开':'AI审讯:关';
+  addSys(STATE.npcAIMode?'—— NPC AI扮演模式已开启 ——':'—— 已切换回本地审讯模式 ——');
+}
+// === UI ===
+function addNPC(name,text){
+  const s=document.getElementById('dialogue-scroll');
+  const r=document.createElement('div');r.className='msg-row msg-npc';
+  r.innerHTML=`<span class="tag">${name}：</span>${text}`;
+  s.appendChild(r);s.scrollTop=s.scrollHeight;
+}
+function addPlayer(text){
+  const s=document.getElementById('dialogue-scroll');
+  const r=document.createElement('div');r.className='msg-row msg-player';
+  r.textContent=text;
+  s.appendChild(r);s.scrollTop=s.scrollHeight;
+}
+function addSys(text){
+  const s=document.getElementById('dialogue-scroll');
+  const r=document.createElement('div');r.className='msg-row msg-system';r.textContent=text;
+  s.appendChild(r);s.scrollTop=s.scrollHeight;
+}
+function addWater(text){
+  const s=document.getElementById('dialogue-scroll');
+  const r=document.createElement('div');r.className='msg-water';
+  r.innerHTML=`<span style="font-size:.75rem;">✦ 江卿禾 ✦</span><br>${text}`;
+  s.appendChild(r);s.scrollTop=s.scrollHeight;
+}
+function addClue(text){
+  // dedup && state tracking
+  if(STATE.clues.includes(text))return;
+  STATE.clues.push(text);
+  const l=document.getElementById('clue-list');
+  const d=document.createElement('div');d.className='clue';d.textContent=text;
+  l.appendChild(d);
+}
+function updateSugs(){
+  const c=document.getElementById('suggestions');c.innerHTML='';
+  if(STATE.freeChatMode){
+    const sgs=['河底发现了什么新线索？','这块瓷片是哪个窑口的？','沈元济为什么选这��桥？','二十年前的水文记录你查过吗？','你觉得我该信谁的说法？'];
+    sgs.forEach(s=>{
+      const chip=document.createElement('span');chip.className='sug-chip';chip.textContent=s;
+      chip.onclick=()=>{document.getElementById('user-input').value=s;};
+      c.appendChild(chip);
+    });
+    return;
+  }
+  if(!STATE.npcId){c.innerHTML='<span class="sug-chip">请选择NPC开始审讯</span>';return;}
+  const n=NPCS[STATE.npcId];
+  if(STATE.action==='question'){n.questions.forEach(q=>{const chip=document.createElement('span');chip.className='sug-chip';chip.textContent=q.q;chip.onclick=()=>{document.getElementById('user-input').value=q.q;};c.appendChild(chip);});}
+  else if(STATE.action==='show'){const chip=document.createElement('span');chip.className='sug-chip';chip.textContent='摊牌：'+n.showKey;chip.onclick=()=>{document.getElementById('user-input').value=n.showKey;};c.appendChild(chip);}
+  else{
+    // 追问模式：显示可追问的关键词选项
+    if(n.followups){
+      Object.keys(n.followups).forEach(k=>{
+        const chip=document.createElement('span');chip.className='sug-chip';chip.textContent=k;
+        chip.onclick=()=>{document.getElementById('user-input').value=k;};
+        c.appendChild(chip);
+      });
+    }else{c.innerHTML='<span class="sug-chip">输入追问内容</span>';}
+  }
+}
+
+// === Ending ===
+function startEnding(){
+  const allDone=['liu_er','chen_minzhi','zhao_laosan','wang_po','sun_maocai'].every(id=>STATE.npcs[id].done);
+  if(!allDone){addSys('请先审讯全部5名嫌疑人。');return;}
+
+  // === 场景04：案件梳理，不出现任何守护灵或NPC立绘 ===
+  const bg=document.getElementById('scene-bg');
+  bg.style.backgroundImage="url('assets/scene_farewell.png')";
+  document.getElementById('spirit-portrait').style.display='block';
+  document.getElementById('npc-display').classList.remove('show');
+  document.getElementById('npc-panel').style.display='none';
+
+  // 场景04暂停BGM
+  document.getElementById('bgm').pause();
+
+  document.getElementById('fog-layer').className='';
+  addSys('—— 雾散了。月光像研磨过的银粉，一粒一粒地落在汴河上。该做最终推理了。——');
+
+  // 鹤踪触发：玩家起身做最终推理
+  triggerChapter2Crane();
+
+  // Memory fragment trigger: all interrogations complete → 瓷片上的鹤
+  addMemoryFragment('m12');
+
+  // Q1
+  const q1=document.createElement('div');
+  q1.innerHTML=`
+    <h3 style="color:var(--lantern-gold);margin-bottom:.8rem;">第一题：沈元济的真实死亡方式</h3>
+    ${['A. 被人推下桥','B. 失足意外落水','C. 坠河后因伤重未能生还'].map((o,i)=>`<button onclick="answerQ(1,${i})" style="display:block;width:100%;margin:4px 0;">${o}</button>`).join('')}
+  `;
+  showEnding(q1);
+}
+
+function answerQ(qNum,choice){
+  STATE.endingAnswers['q'+qNum]=choice;
+  const correct=[2,1,0]; // C=2, B=1, A=0
+
+  if(qNum===1){
+    const q2=document.createElement('div');
+    q2.innerHTML=`<h3 style="color:var(--lantern-gold);margin-bottom:.8rem;">第二题：沈元济返乡的真正目的</h3>${['A. 寻访亲友','B. 查清父亲二十年前沉河的真相','C. 与人赴约相见'].map((o,i)=>`<button onclick="answerQ(2,${i})" style="display:block;width:100%;margin:4px 0;">${o}</button>`).join('')}`;
+    showEnding(q2);
+  }else if(qNum===2){
+    const q3=document.createElement('div');
+    q3.innerHTML=`<h3 style="color:var(--lantern-gold);margin-bottom:.8rem;">第三题：二十年前河底的陈年秘密</h3>${['A. 沈父被孙茂才所害沉河','B. 沈父自愿投河','C. 河底埋藏财物'].map((o,i)=>`<button onclick="answerQ(3,${i})" style="display:block;width:100%;margin:4px 0;">${o}</button>`).join('')}`;
+    showEnding(q3);
+  }else{
+    showResult();
+  }
+}
+
+function showEnding(content){
+  const ov=document.getElementById('ending-overlay');
+  const ct=document.getElementById('ending-content');
+  ct.innerHTML='';ct.appendChild(content);
+  ov.classList.add('active');
+}
+
+function showResult(){
+  // === 三重门结局系统 ===
+  const doors=STATE.jwDoors;
+  const evidenceCount=(doors.ev1?1:0)+(doors.ev2?1:0)+(doors.ev3?1:0);
+  const emotion=doors.emotion?1:0;
+  const partner=doors.partner?1:0;
+  const askTotal=STATE.askJHTotal;
+
+  // 隐藏D结局：水之感共鸣
+  let ending='C',title='迷雾重重',desc,jLine,hook,flashback;
+  if(evidenceCount>=2&&emotion>=1){
+    if(askTotal>=3){
+      ending='D';title='水之感共鸣';
+    }else{
+      ending='A';title='水落石出';
+    }
+  }else if(evidenceCount>=1){
+    ending='B';title='似是而非';
+  }
+
+  switch(ending){
+    case 'A':
+      desc='沈元济回到汴京，不是为了活着——是为了让二十年前沉在河底的父亲，终于有人替他喊一声冤。他以自己的死亡为笔，在汴河的水面上写完了最后一封诉状。孙茂才伏法。河水的颜色，比昨天清了一分。';
+      jLine='"漂亮——那个赵老三，他看见的不止这些。河床上那道印子我还没探完——等你回来一起。对了，那只白鹤还停在桥头。它好像在等你。"';
+      flashback='你走出酒肆时，虹桥上晚风灌进领口。你忽然站住了——不是因为冷。是因为你看见了桥下自己的倒影。倒影里，你穿的是一件玄色深衣，不是明朝的布衣。袖口有金纹。倒影抬起头，看了你一眼。那眼神是认识的。江卿禾的声音从背后传来，很轻：\u201c……你看到了？那条河，记得的不只是我。\u201d';
+      break;
+    case 'B':
+      desc='部分真相浮出水面。孙茂才仅以见死不救受到轻罚。你知道沈元济并非简单失足——但那桩旧案的全貌，仍沉在没有人敢伸手去捞的河底。';
+      jLine='"对了两题——不错。那个赵老三——他看见的不止这些。你再待几天我帮你去磨。河床上那道印子我还没探完——等你回来一起。对了，那只鹤没走。"';
+      flashback='你走下酒肆楼梯。王婆在擦柜台，头也不抬地说：\u201c客官，你掉了样东西。\u201d柜台上放着一片龟甲——不是你的。你拿起来，背面有字。是三个字：\u201c别回头。\u201d';
+      break;
+    case 'C':
+      desc='证据不足。以意外落水结案。但你离开虹桥的那个傍晚——你回头看最后一眼的时候，河面上你自己的倒影比你慢了一拍才转过头来。像是水面舍不得放你走。';
+      jLine='"别灰心。你知道我在河底捞了多少年才找到第一块有用的瓷片吗。有些东西沉得深——不急。我在。河也在。那只鹤也在。"';
+      flashback='你站在虹桥上，看着河水发呆。刘二收摊从你身边走过，嘟囔了一句：\u201c怪了……今早河面上有根白色羽毛，我捞起来，一碰就碎了。\u201d你低头看自己手指——指缝间有一根细小的鹤羽。你不知道它是怎么沾上的。';
+      break;
+    case 'D':
+      desc='不仅水落石出——你与汴河的共鸣比任何记录都深。孙茂才伏法。沈家两代人的冤屈终被洗清。而水面下——还有更深、更久远的东西在等你。';
+      jLine='（江卿禾沉默了很久。然后说了一句不属于任何案件的话）"你一直在问我。但你没问我——我自己在等谁。"（她笑了一下，转身走向桥头，白鹤从她肩头掠过。）';
+      flashback='你先看到玄色深衣的倒影。然后是龟甲——上面刻的不是\u201c别回头\u201d，是你的名字。三千年前的写法。你不认识那个字——但你知道那是你的名字。江卿禾从身后递来一支白鹤羽毛："这羽毛漂了很久——从上游来。"';
+      break;
+  }
+
+  hook=ending==='D'?'—— 第三章：端门炬火（含方祀额外对话彩蛋） ——':'—— 第三章：端门炬火 ——';
+  const allDone=evidenceCount>=3?'全部'+(emotion?'三':'两')+'条核心证据已确认':'';
+
+  const ct=document.getElementById('ending-content');
+  ct.innerHTML=`
+    <h2>${title}</h2>
+    <div class="result">
+      <div class="stat-row"><span class="stat-label">证据门</span><span class="stat-val ${evidenceCount>=2?'done':''}">${evidenceCount}/3 核心事实确认</span></div>
+      <div class="stat-row"><span class="stat-label">情感门</span><span class="stat-val ${emotion?'done':'miss'}">${emotion?'✓ 沉默触发了隐藏台词':'— 未触发'}</span></div>
+      <div class="stat-row"><span class="stat-label">搭档门</span><span class="stat-val ${partner?'done':'miss'}">${partner?'✓ 江卿禾与你共鸣':'— 未求助'}</span></div>
+    </div>
+    <div class="desc">${desc}</div>
+    <div class="j-line">✦ 江卿禾："${jLine}"</div>
+    <div class="next-chapter">${hook}</div>
+    <button onclick="goScene05('${ending}','${encodeURIComponent(flashback)}')">继续</button>
+  `;
+}
+
+function goScene05(endingType,flashbackEnc){
+  const flashback=decodeURIComponent(flashbackEnc||'');
+  document.getElementById('ending-overlay').classList.remove('active');
+  const bg=document.getElementById('scene-bg');
+  bg.style.backgroundImage="url('assets/scene_farewell.png')";
+  document.getElementById('spirit-portrait').style.display='block';
+  setUIMode('dialogue');
+
+  addSys('—— 江卿禾站在桥头。白鹤已经飞远了。——');
+
+  // 告别对话
+  setTimeout(()=>{
+    addWater('（她转身看着你。汴河的风把她的袖子吹起来。）');
+    addWater('"案子结了。河底的泥——比昨天清了些。"');
+  },1500);
+
+  // 玩家记忆闪回（三结局不同）
+  setTimeout(()=>{
+    addSys('（一段不属于这一世的记忆闪过——）');
+    addSys(flashback);
+    addMemoryFragment('m18');  // 章节末尾鹤羽触发
+  },3500);
+
+  // 好感度高：额外CG
+  if(STATE.jhTrust>=70||endingType==='D'){
+    setTimeout(()=>{
+      if(endingType==='D'){
+        addWater('（她沉默了很久。然后从袖子里取出那块天青汝瓷碎片。）');
+        addWater('"你一直在问我——但你没问我我自己在等谁。"（她笑了一下）"下次来——我会告诉你。"');
+      }else{
+        addWater('（她沉默了一会儿。然后从袖子里取出那块天青汝瓷碎片——拼了一小块的盏底。她把它放在了桥栏上。）');
+        addWater('"这个留给你。不是送你——是让你记得。这条河底下——还有东西没挖完。"');
+        addWater('（她退后两步，朝你扬了扬下巴。）"下次来——我还在这座桥上。"');
+      }
+    },7000);
+  }
+
+  // 双重点击进入下一章
+  let clickCount=0;
+  const sceneArea=document.getElementById('scene-area');
+  sceneArea.style.cursor='pointer';
+  sceneArea.onclick=function(){
+    clickCount++;
+    if(clickCount===1)addSys('（再次点击画面继续……）');
+    if(clickCount>=2){
+      addSys('—— 第二章：汴河疑影 · 完 ——');
+      const btn=document.createElement('button');
+      btn.textContent=endingType==='D'?'跟随鹤鸣，继续前行':'跟随鹤鸣，继续前行';
+      btn.style.cssText='display:block;margin:8px auto;background:var(--lantern-gold);color:#000;border:none;font-family:var(--font-song);padding:.4rem 2rem;cursor:pointer;font-size:.9rem;border-radius:4px;';
+      btn.onclick=()=>showTransfer(endingType);
+      document.getElementById('dialogue-scroll').appendChild(btn);
+      sceneArea.onclick=null;sceneArea.style.cursor='default';
+    }
+  };
+}
+
+function finishChapter(){
+  // 保存本地存档
+  const save=loadSave();
+  if(!save.chapters['2'])save.chapters['2']={};
+  save.chapters['2'].completed=true;
+  save.chapters['2'].playedAt=new Date().toISOString();
+  // Save chapter-specific data
+  save.chapterSpecificData['2']={
+    npcsBroken:['liu_er','chen_minzhi','zhao_laosan','wang_po','sun_maocai'].filter(i=>STATE.npcs[i].broken),
+    waterSenseUsed:Object.keys(STATE.waterSenseUsed).length,
+    fogLevel:5,
+    memoryFragments:STATE.memoryFragments,
+  };
+  // Merge memory fragments into global save
+  save.memoryFragments=save.memoryFragments||{};
+  STATE.memoryFragments.forEach(f=>{save.memoryFragments[f]=true;});
+  // Merge collected items into global save
+  save.collectedItems=save.collectedItems||{};
+  Object.keys(collectedItems).forEach(k=>{if(collectedItems[k])save.collectedItems[k]=true;});
+  save.guardianAffection.jiangqinghe=STATE.jhTrust;
+  save.craneSightings=(save.craneSightings||0)+1;
+  save.judgements.chapter2={
+    q1:STATE.endingAnswers.q1===2?'C':'?',
+    q2:STATE.endingAnswers.q2===1?'B':'?',
+    q3:STATE.endingAnswers.q3===0?'A':'?',
+    score:(STATE.jwDoors.ev1?1:0)+(STATE.jwDoors.ev2?1:0)+(STATE.jwDoors.ev3?1:0),
+  };
+  saveSave(save);
+
+  // 因果回廊写入
+  const doors=STATE.jwDoors;const evCount=(doors.ev1?1:0)+(doors.ev2?1:0)+(doors.ev3?1:0);
+  const ch2Status=(evCount>=2&&doors.emotion)?'perfect':(evCount>=1?'fixable':'fixable');
+  try{const cs=JSON.parse(localStorage.getItem('causal_status')||'{}');cs.ch2=ch2Status;localStorage.setItem('causal_status',JSON.stringify(cs));}catch(e){}
+
+  // 显示章节导航
+  showChapterNav();
+}
+
+function correctCount(){
+  const a=STATE.endingAnswers;
+  return (a.q1===2?1:0)+(a.q2===1?1:0)+(a.q3===0?1:0);
+}
+
+function loadSave(){
+  try{const r=localStorage.getItem('ru_qi_save');return r?JSON.parse(r):{version:2,chapters:{},craneSightings:0,guardianAffection:{},keepsakes:[],memoryFragments:{},judgements:{},chapterSpecificData:{}};}
+  catch(e){return {version:2,chapters:{},craneSightings:0,guardianAffection:{},keepsakes:[],memoryFragments:{},judgements:{},chapterSpecificData:{}};}
+}
+function saveSave(save){
+  save.updated=new Date().toISOString();
+  localStorage.setItem('ru_qi_save',JSON.stringify(save));
+}
+
+function leaveGame(){
+  if(confirm('确定要离开游戏吗？未保存的进度将丢失。')){
+    // 停止BGM
+    document.getElementById('bgm').pause();
+    // 重新加载页面回到开场
+    location.href = '../As promised.html';
+  }
+}
+
+function toggleBGM(){
+  const bgm=document.getElementById('bgm');
+  const btn=document.getElementById('bgm-toggle');
+  if(bgm.paused){
+    bgm.volume=0.13;
+    bgm.play().catch(()=>{});
+    btn.textContent='关闭音乐';
+  }else{
+    bgm.pause();
+    btn.textContent='开启音乐';
+  }
+}
+
+// === 移送函 ===
+function showLetter(){
+  document.getElementById('letter-overlay').classList.add('active');
+}
+function closeLetter(){
+  document.getElementById('letter-overlay').classList.remove('active');
+}
+// === 移送函 ===
+function showTransfer(endingType){
+  const ov=document.getElementById('transfer-overlay');
+  // 填充玩家名（从存档读取或默认）
+  try{
+    const save=JSON.parse(localStorage.getItem('ru_qi_save')||'{}');
+    const name=save.playerName||'轮回者';
+    // 前两字用乱码遮掩，避免提前暴露轮回设定
+    const masked=name.length>2?'██'+name.substring(2):'██'+name;
+    document.getElementById('tf-player').textContent=masked;
+  }catch(e){document.getElementById('tf-player').textContent='██者';}
+  // 填充裁断结论
+  const conclusions={A:'他杀案成立——孙茂才为主犯，定性为谋财害命。',B:'部分他杀——孙茂才以见死不救从轻发落。',C:'意外溺亡——证据不足，以失足落水结案。',D:'他杀案成立——孙茂才伏法，二十年前旧案一并昭雪。'};
+  document.getElementById('tf-conclusion').textContent=conclusions[endingType]||conclusions.C;
+  // 存储结局类型供confirmTransfer使用
+  STATE._endingType=endingType;
+  ov.classList.add('active');
+}
+
+function confirmTransfer(){
+  document.getElementById('transfer-overlay').classList.remove('active');
+  addSys('—— 卷宗已移送完毕。鹤羽已随卷宗同行。 ——');
+  finishChapter();
+}
+
+// === 鹤踪系统 ===
+// 章节名称映射
+const CRANE_CHAPTERS={
+  1:{era:'明·万历',name:'潞王陵',spirit:'陆砚'},
+  2:{era:'北宋·汴河',name:'虹桥',spirit:'江卿禾'},
+  3:{era:'汉·洛阳',name:'端门炬火',spirit:'方祀·炁灵'},
+  4:{era:'商·殷墟',name:'祭祀坑',spirit:'萧钺'},
+  5:{era:'早商·郑州商城',name:'商城城墙',spirit:'顾冶珩'},
+  6:{era:'远古·太昊陵',name:'蓍草坛',spirit:'温岐'},
+  7:{era:'新石器·黄山',name:'玉作坊',spirit:'温瑜'},
+  8:{era:'仰韶·仰韶村',name:'彩陶窑',spirit:'苏涧'},
+};
+
+function initCraneTracks(){
+  let ct=localStorage.getItem('crane_tracks');
+  if(!ct){
+    ct={ch1:false,ch2:false,ch3:false,ch4:false,ch5:false,ch6:false,ch7:false,ch8:false,total:0};
+    localStorage.setItem('crane_tracks',JSON.stringify(ct));
+  }
+  try{ct=JSON.parse(ct);}catch(e){ct={ch1:false,ch2:false,ch3:false,ch4:false,ch5:false,ch6:false,ch7:false,ch8:false,total:0};}
+  // 更新图标状态
+  updateCraneIcon(ct);
+  renderCranePanel(ct);
+}
+
+function registerCraneTrack(chapter){
+  let ct;
+  try{ct=JSON.parse(localStorage.getItem('crane_tracks')||'{}');}catch(e){ct={};}
+  const key='ch'+chapter;
+  if(ct[key])return; // 已收集
+  ct[key]=true;ct.total=(ct.total||0)+1;
+  localStorage.setItem('crane_tracks',JSON.stringify(ct));
+  // UI通知
+  const ch=CRANE_CHAPTERS[chapter];
+  const toast=document.getElementById('crane-toast');
+  toast.textContent='鹤踪·'+(chapter===2?'其二':'其'+chapter)+' | '+(ch?ch.era+ch.name:'?')+'已收录';
+  toast.classList.add('show');
+  setTimeout(()=>toast.classList.remove('show'),3000);
+  // 更新图标
+  updateCraneIcon(ct);
+  renderCranePanel(ct);
+  // 轻度鹤鸣音效
+  try{
+    const audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    const osc=audioCtx.createOscillator();
+    const gain=audioCtx.createGain();
+    osc.connect(gain);gain.connect(audioCtx.destination);
+    osc.type='sine';osc.frequency.setValueAtTime(1200,audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1800,audioCtx.currentTime+.1);
+    osc.frequency.exponentialRampToValueAtTime(900,audioCtx.currentTime+.3);
+    gain.gain.setValueAtTime(.15,audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(.01,audioCtx.currentTime+.4);
+    osc.start(audioCtx.currentTime);osc.stop(audioCtx.currentTime+.4);
+  }catch(e){}
+}
+
+function updateCraneIcon(ct){
+  const icon=document.getElementById('crane-icon');
+  const collected=ct.total>0;
+  if(collected)icon.classList.add('collected');
+  icon.title='鹤踪 ('+ct.total+'/8)\n点击查看详情';
+}
+
+function toggleCranePanel(){
+  const panel=document.getElementById('crane-panel');
+  panel.classList.toggle('show');
+}
+
+function renderCranePanel(ct){
+  const panel=document.getElementById('crane-panel');
+  panel.innerHTML='';
+  for(let i=1;i<=8;i++){
+    const ch=CRANE_CHAPTERS[i];
+    const dot=document.createElement('span');
+    dot.className='crane-dot'+(ct['ch'+i]?' lit':'');
+    dot.dataset.tip='第'+i+'章·'+ch.era+'·'+ch.name+'·'+ch.spirit;
+    dot.title='第'+i+'章·'+ch.era+'·'+ch.name+'·守护灵：'+ch.spirit+(ct['ch'+i]?' ✓已收录':'');
+    panel.appendChild(dot);
+  }
+}
+
+// 鹤踪触发点
+function triggerChapter2Crane(){
+  if(!STATE._craneTriggered){
+    STATE._craneTriggered=true;
+    registerCraneTrack(2);
+  }
+}
+document.addEventListener('DOMContentLoaded',init);
+
+// ===== 章节导航 (测试版) =====
+const ALL_CHAPTERS=[
+  {n:1,era:'明·万历',name:'神道萤火',spirit:'陆砚·石灵',file:'../As promised.html'},
+  {n:2,era:'北宋·汴河',name:'汴河疑影',spirit:'江卿禾·水灵',file:'index.html'},
+];
+function getChapterState(n){
+  try{const s=JSON.parse(localStorage.getItem('ru_qi_save')||'{}');if(s.chapters&&s.chapters[n]&&s.chapters[n].completed)return'completed';return n===2?'unlocked':'locked';}
+  catch(e){return'locked';}
+}
+function showChapterNav(){
+  let html='<div style="font-size:1.2rem;color:oklch(85% .015 85);margin-bottom:1rem;letter-spacing:.1em;">—— 本章结 ——</div>';
+  ALL_CHAPTERS.forEach(ch=>{
+    const st=getChapterState(ch.n);
+    const borderColor=st==='completed'?'oklch(60% .12 140)':st==='unlocked'?'var(--water-cyan)':'oklch(25% .015 250/.3)';
+    html+=`<div style="background:oklch(12% .012 260/.9);border:1px solid ${borderColor};padding:1rem;text-align:center;margin:.3rem;border-radius:4px;min-width:140px;display:inline-block;">
+      <div style="color:oklch(80% .16 78);font-size:1.1rem;">${ch.n}</div>
+      <div style="color:oklch(70% .012 80);font-size:.85rem;">${ch.name}</div>
+      <div style="color:oklch(55% .06 75);font-size:.7rem;">${ch.era}</div>`;
+    if(st==='unlocked') html+=`<button onclick="location.href='${ch.file}'" style="display:block;margin:.5rem auto 0;background:transparent;border:1px solid var(--water-cyan);color:var(--water-cyan);font-family:var(--font-song);font-size:.7rem;padding:.2rem 1rem;cursor:pointer;">▶ 进入</button>`;
+    else if(st==='completed') html+=`<div style="font-size:.6rem;color:oklch(60% .12 140);margin-top:.3rem;">✓ 已通关</div><button onclick="location.href='${ch.file}'" style="display:block;margin:.2rem auto 0;background:transparent;border:1px solid oklch(60% .12 140/.5);color:oklch(60% .12 140);font-family:var(--font-song);font-size:.65rem;padding:.15rem .8rem;cursor:pointer;">重玩</button>`;
+    else html+=`<div style="font-size:.6rem;color:oklch(30% .02 255);margin-top:.3rem;">🔒</div>`;
+    html+=`</div>`;
+  });
+  html+=`<div style="margin-top:1rem;"><button onclick="location.href='../As promised.html'" style="background:transparent;border:1px solid oklch(50% .02 340/.5);color:oklch(50% .02 340);font-family:var(--font-song);font-size:.7rem;padding:.3rem 1.5rem;cursor:pointer;">辞别归去</button></div>`;
+  document.getElementById('chapter-end').innerHTML=html;
+  document.getElementById('chapter-end').style.display='flex';
+}
+
+</script>
+
+<!-- 云笺弹窗 -->
+<div id="yunjian-overlay" onclick="if(event.target===this)closeYunjianShop()">
+<div class="yunjian-card" onclick="event.stopPropagation()">
+<h2>云 笺</h2>
+<div class="yj-sub">以云端笔墨，续古今之谈</div>
+<div class="yunjian-tier" style="--tier-color:#E0C068" onclick="event.stopPropagation();showPaper('sajinjian')"><div class="yj-name" style="color:#E0C068">洒金笺</div><div class="yj-desc">三十轮对话 · 浅酌小叙</div><div class="yj-price" style="color:#E0C068">&yen;6</div></div>
+<div class="yunjian-tier" style="--tier-color:#C75B7A" onclick="event.stopPropagation();showPaper('xuetaojian')"><div class="yj-name" style="color:#C75B7A">薛涛笺</div><div class="yj-desc">一百轮对话 · 秉烛长谈</div><div class="yj-price" style="color:#C75B7A">&yen;16</div></div>
+<div class="yunjian-tier" style="--tier-color:#4DB8A0" onclick="event.stopPropagation();showPaper('liushajian')"><div class="yj-name" style="color:#4DB8A0">流沙笺</div><div class="yj-desc">三百轮对话 · 常伴左右</div><div class="yj-price" style="color:#4DB8A0">&yen;32</div></div>
+<button class="yunjian-close" onclick="closeYunjianShop()">关 闭</button>
+</div>
+</div>
+
+<!-- 行迹弹窗 -->
+<div id="travel-overlay" onclick="if(event.target===this)closeTravelLog()">
+<div class="travel-card" onclick="event.stopPropagation()">
+<h2>行 迹</h2>
+<div class="tv-sub">以步履丈量古今之间 · 郑州</div>
+<div class="travel-timeline">
+<div class="travel-site" style="--site-color:#4A7C59"><div class="travel-dot"></div><span class="travel-name" style="color:#4A7C59">郑州商城</span><span class="travel-era">早商</span><span class="travel-dist">同城</span></div>
+<div class="travel-site" style="--site-color:#7FBBB3"><div class="travel-dot"></div><span class="travel-name" style="color:#7FBBB3">开封州桥</span><span class="travel-era">北宋</span><span class="travel-dist">约 60 km</span></div>
+<div class="travel-site" style="--site-color:#9B7EC4"><div class="travel-dot"></div><span class="travel-name" style="color:#9B7EC4">新乡潞王陵</span><span class="travel-era">明</span><span class="travel-dist">约 66 km</span></div>
+<div class="travel-site" style="--site-color:#9C2F2F"><div class="travel-dot"></div><span class="travel-name" style="color:#9C2F2F">洛阳端门</span><span class="travel-era">汉</span><span class="travel-dist">约 110 km</span></div>
+<div class="travel-site" style="--site-color:#CCA345"><div class="travel-dot"></div><span class="travel-name" style="color:#CCA345">漯河贾湖</span><span class="travel-era">裴李岗</span><span class="travel-dist">约 146 km</span></div>
+<div class="travel-site" style="--site-color:#86B84A"><div class="travel-dot"></div><span class="travel-name" style="color:#86B84A">周口太昊陵</span><span class="travel-era">传说</span><span class="travel-dist">约 160 km</span></div>
+<div class="travel-site" style="--site-color:#7A7A7A"><div class="travel-dot"></div><span class="travel-name" style="color:#7A7A7A">安阳殷墟</span><span class="travel-era">商晚</span><span class="travel-dist">约 165 km</span></div>
+<div class="travel-site" style="--site-color:#C49A3C"><div class="travel-dot"></div><span class="travel-name" style="color:#C49A3C">三门峡仰韶村</span><span class="travel-era">仰韶</span><span class="travel-dist">约 171 km</span></div>
+<div class="travel-site" style="--site-color:#9BAF3C"><div class="travel-dot"></div><span class="travel-name" style="color:#9BAF3C">南阳黄山</span><span class="travel-era">新石器</span><span class="travel-dist">约 680 km</span></div>
+</div>
+<button class="travel-close" onclick="closeTravelLog()">关 闭</button>
+</div>
+</div>
+
+<!-- 信笺图片弹窗 -->
+<div id="paper-viewer" onclick="closePaper()">
+<div class="pv-wrapper" onclick="event.stopPropagation()">
+<div class="pv-img-box">
+<img src="" alt="">
+<div class="pv-overlay">
+<div class="pv-desc"></div>
+<div class="pv-bar">
+<span class="pv-get-btn">点击获取</span>
+<span class="pv-close" onclick="closePaper()">关 闭</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+</script>
+<button onclick="if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(()=>{})" style="position:fixed;top:16px;right:16px;z-index:1001;background:transparent;border:1px solid var(--water-cyan);color:var(--water-cyan);font-family:var(--font-song);font-size:.65rem;letter-spacing:.06em;padding:4px 10px;cursor:pointer;border-radius:3px;opacity:.5;transition:all .3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.5'">⛶</button>
+</body>
+</html>

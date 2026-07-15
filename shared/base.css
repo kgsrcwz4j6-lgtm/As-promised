@@ -1,0 +1,22 @@
+/* === 《如期》共享字体设置 ===
+   所有章节继承此文件，不继承文字颜色。
+   颜色由各章根据九层色谱自定义。 */
+
+@font-face {
+  font-family:'Jinghua LaoSong';
+  src:url('font/京華老宋体.ttf') format('truetype');
+  font-display:swap;
+}
+
+:root {
+  --font-song: 'Jinghua LaoSong',serif;
+  --font-body: 'Jinghua LaoSong',serif;
+  --font-brush: 'Jinghua LaoSong','STXingkai','KaiTi',serif;
+}
+
+/* 全局字体基准 */
+html,body {
+  font-family: var(--font-body);
+  font-size: clamp(14px, 1.4vw, 18px);
+  -webkit-font-smoothing: antialiased;
+}
